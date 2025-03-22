@@ -2,7 +2,7 @@ import json
 import requests
 import os
 
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List, Tuple, Union
 
 import re
 from bs4 import BeautifulSoup
@@ -14,10 +14,25 @@ import openai
 from backend.config.settings import settings
 from datetime import datetime
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
 class FinancialExtractor:
-    """Extract financial data from HTML reports."""
+    """
+    Extract financial data from HTML reports.
+    
+    Attributes:
+        financial_data (Dict[str, Any]): Extracted financial data
+        client (Optional[openai.OpenAI]): OpenAI client instance
+    
+    Raises:
+        ValueError: If invalid input is provided
+        RuntimeError: If critical extraction fails
+    """
     
     def __init__(self, openai_api_key: Optional[str] = None):
         self.financial_data = {}
@@ -31,9 +46,14 @@ class FinancialExtractor:
             else:
                 self.client = None
                 logger.warning("No OpenAI API key provided - LLM fallback strategies will be disabled")
-        
     def extract_from_html(self, html_content: str) -> Dict[str, Any]:
         """Extract financial data from HTML content."""
+        if not html_content or not isinstance(html_content, str):
+            raise ValueError("Invalid HTML content provided")
+        
+        if len(html_content.strip()) == 0:
+            raise ValueError("Empty HTML content provided")
+        
         try:
             soup = BeautifulSoup(html_content, 'html.parser')
             
@@ -46,33 +66,48 @@ class FinancialExtractor:
             }
             
             # Extract data from different financial statements
-            self._extract_income_statement(soup)
-            self._extract_balance_sheet(soup)
-            self._extract_cash_flow(soup)
+            try:
+                self._extract_income_statement(soup)
+            except Exception as e:
+                logger.error(f"Error extracting income statement: {e}", exc_info=True)
+            
+            try:
+                self._extract_balance_sheet(soup)
+            except Exception as e:
+                logger.error(f"Error extracting balance sheet: {e}", exc_info=True)
+            
+            try:
+                self._extract_cash_flow(soup)
+            except Exception as e:
+                logger.error(f"Error extracting cash flow: {e}", exc_info=True)
             
             # Add company information extraction
-            self.financial_data['information'] = self._extract_company_information(soup)
+            try:
+                self.financial_data['information'] = self._extract_company_information(soup)
+            except Exception as e:
+                logger.error(f"Error extracting company information: {e}", exc_info=True)
+                self.financial_data['information'] = {
+                    'company_name': "Unknown Company",
+                    'accounting_period': str(datetime.now().year)
+                }
             
-            # Ensure required fields exist
-            if not self.financial_data['information'].get('company_name'):
-                self.financial_data['information']['company_name'] = "Unknown Company"
-            if not self.financial_data['information'].get('accounting_period'):
-                self.financial_data['information']['accounting_period'] = str(datetime.now().year)
+            # Validate required fields and apply fallbacks
+            try:
+                self._validate_and_fix_required_fields(soup)
+            except Exception as e:
+                logger.error(f"Error in validation and fixing: {e}", exc_info=True)
+            
+            # Perform final validation check
+            try:
+                self._perform_final_validation()
+            except Exception as e:
+                logger.error(f"Error in final validation: {e}", exc_info=True)
             
             return self.financial_data
             
         except Exception as e:
-            logger.error(f"Error extracting financial data: {e}")
-            # Return minimal valid structure instead of raising
-            return {
-                'income_statement': {},
-                'balance_sheet': {},
-                'cash_flow': {},
-                'information': {
-                    'company_name': "Unknown Company",
-                    'accounting_period': str(datetime.now().year)
-                }
-            }
+            logger.error(f"Critical error extracting financial data: {e}", exc_info=True)
+            raise RuntimeError(f"Failed to extract financial data: {str(e)}")
     
     def _extract_income_statement(self, soup: BeautifulSoup) -> None:
         """Extract data from income statement using multiple fallback strategies."""
@@ -166,107 +201,9 @@ class FinancialExtractor:
         else:
             logger.error("Failed to process income statement data")
         
-        # Strategy 5 (Last Resort): Use fuzzy search + OpenAI
-        if (not income_table or not processed_data) and self.client:
-            logger.info("Attempting last resort strategy with fuzzy search and LLM")
-            try:
-                # Find any text containing "VÝKAZ ZISKU A ZTRÁT" with fuzzy matching
-                all_text = soup.get_text()
-                text_blocks = all_text.split('\n')
-                
-                # Store all potential income statement sections
-                potential_sections = []
-                
-                for i, block in enumerate(text_blocks):
-                    if SequenceMatcher(None, "VÝKAZ ZISKU A ZTRÁT", block.upper()).ratio() > 0.7:
-                        # Take next 130 lines after finding the header (increased from 30 to capture full statement)
-                        context = '\n'.join(text_blocks[i:i+130])
-                        
-                        # Simple validation to check if this looks like an income statement
-                        validation_terms = ['Tržby', 'Výkonová', 'Výsledek', 'náklady']
-                        matches = sum(1 for term in validation_terms if term.lower() in context.lower())
-                        
-                        if matches >= 2:  # At least 2 key terms should be present
-                            potential_sections.append({
-                                'context': context,
-                                'score': matches,  # Store the number of matches as a relevance score
-                                'position': i  # Store the position in document
-                            })
-                
-                if not potential_sections:
-                    logger.warning("No potential income statement sections found")
-                    return
-                
-                # Sort sections by score (most relevant first) and position (earlier in document first)
-                potential_sections.sort(key=lambda x: (-x['score'], x['position']))
-                
-                # Combine contexts if they're not too far apart (within 200 lines)
-                combined_context = potential_sections[0]['context']
-                for i in range(1, len(potential_sections)):
-                    if (potential_sections[i]['position'] - 
-                        (potential_sections[i-1]['position'] + 130)) < 200:
-                        combined_context += "\n...\n" + potential_sections[i]['context']
-                
-                # Prepare prompt for OpenAI
-                prompt = f"""
-                Extract key financial metrics from this income statement (Výkaz zisku a ztrát).
-                The text is in Czech and might contain OCR errors.
-                
-                Please extract these specific values:
-                1. Revenue from products and services (Tržby z prodeje výrobků a služeb)
-                2. Revenue from goods (Tržby za prodej zboží)
-                3. Production consumption (Výkonová spotřeba)
-                4. Personnel costs (Osobní náklady)
-                5. Operating profit (Provozní výsledek hospodaření)
-                6. Profit before tax (Výsledek hospodaření před zdaněním)
-                7. Net profit (Výsledek hospodaření za účetní období)
-                
-                Text from document:
-                {combined_context}
-                
-                Return ONLY a JSON object with these keys:
-                {
-                    "revenue_from_products_and_services_current": number,
-                    "revenue_from_goods_current": number,
-                    "production_consumption_current": number,
-                    "personnel_costs_current": number,
-                    "operating_profit_current": number,
-                    "profit_before_tax_current": number,
-                    "net_profit_current": number
-                }
-                
-                If a value cannot be found, use null. Remove any thousands separators and convert to integers.
-                If you find multiple values for the same metric, use the most recent or most complete one.
-                """
-                
-                # Call OpenAI API using the client
-                response = self.client.chat.completions.create(
-                    model="gpt-4",
-                    messages=[
-                        {"role": "system", "content": "You are a financial data extraction assistant. Extract only the requested metrics and return them in JSON format."},
-                        {"role": "user", "content": prompt}
-                    ],
-                    temperature=0.1
-                )
-                
-                try:
-                    # Parse the response
-                    llm_extracted_data = json.loads(response.choices[0].message.content)
-                    
-                    # Validate the extracted data
-                    if any(value is not None for value in llm_extracted_data.values()):
-                        logger.info("Successfully extracted income statement data using LLM")
-                        self.financial_data['income_statement'] = llm_extracted_data
-                        return
-                except json.JSONDecodeError as e:
-                    logger.error(f"Failed to parse LLM response: {e}")
-                except Exception as e:
-                    logger.error(f"Error processing LLM response: {e}")
-                    
-            except Exception as e:
-                logger.error(f"Error in LLM fallback strategy: {e}")
+       
             
-            logger.error("All income statement extraction strategies failed")
+            logger.error("All income statement extraction strategies failed LLM will be tried later")
     
     def _validate_income_statement_data(self, data: List[Dict[str, str]]) -> bool:
         """Validate that extracted data appears to be from income statement."""
@@ -505,6 +442,12 @@ class FinancialExtractor:
         # Log the result for debugging
         logger.debug(f"Processed income statement data: {result}")
         
+        # Always set EBIT equal to operating profit if available
+        if 'operating_profit_current' in result:
+            result['ebit_current'] = result['operating_profit_current']
+        if 'operating_profit_previous' in result:
+            result['ebit_previous'] = result['operating_profit_previous']
+        
         return result
     
     def _process_balance_sheet(self, data: List[Dict[str, str]]) -> Dict[str, Any]:
@@ -715,10 +658,16 @@ class FinancialExtractor:
             if SequenceMatcher(None, search_text.lower(), header.text.strip().lower()).ratio() > threshold:
                 return header
         return None
+    
+    
+    
+    
+            
+            
 
     def _extract_company_information(self, soup: BeautifulSoup) -> Dict[str, Any]:
-        """Extract comprehensive company information."""
-        # Initialize with default values to ensure required fields exist
+        """Extract company information using pure LLM approach with the first 250 lines."""
+        # Initialize with default values as a fallback
         result = {
             "accounting_period": None,
             "company_name": None,
@@ -730,77 +679,477 @@ class FinancialExtractor:
             "industry": None
         }
         
+        if not self.client:
+            logger.error("OpenAI client not available for LLM extraction")
+            return result
+        
         try:
-            # Extract all text from the document
+            # Get the first 250 lines of text
             all_text = soup.get_text()
+            lines = all_text.split('\n')
+            first_150_lines = '\n'.join(lines[:150])
             
-            # First try direct extraction before using OpenAI
-            # Look for company name in typical locations
-            company_patterns = [
-                r'(?:Obchodní firma|Název společnosti|Company name):\s*([^\n]+)',
-                r'(?:Společnost|Company):\s*([^\n]+)',
-            ]
+            # Prepare the LLM prompt with strict requirements
+            prompt = f"""
+            Extract the following company information from this Czech financial report text. The text is from the first 250 lines of an annual report and may contain OCR errors. Return ONLY a JSON object with the exact fields specified below. Do not add extra fields or explanations.
+
+            Fields to extract:
+            1. "accounting_period": The year of the report (e.g., "2023") from the title or early context.
+            2. "company_name": The full company name (e.g., "ISOTRA a.s.").
+            3. "legal_form": The legal form (e.g., "akciová společnost").
+            4. "main_activities": A list of primary business activities as listed in the "Předmět podnikání" section (e.g., "Výroba elektřiny", "Izolatérství"), not marketing activities.
+            5. "employees": The number of employees as of the report's end date (e.g., 534 from "k 31. 12. 2023 v trvalém pracovním poměru 534"), or null if not found.
+            6. "established": The establishment date (e.g., "14. září 1992").
+            7. "headquarters": The company address (e.g., "Bílovecká 2411/1, 74601 Opava").
+            8. "industry": The exact industry from this list ONLY: Advertising, Aerospace/Defense, Apparel, Auto & Truck, Auto Parts, Beverage (Alcoholic), Beverage (Soft), Broadcasting, Building Materials, Business & Consumer Services, Cable TV, Chemical (Basic), Chemical (Diversified), Chemical (Specialty), Coal & Related Energy, Computer Services, Computers/Peripherals, Construction Supplies, Diversified, Drugs (Pharmaceutical), Education, Electrical Equipment, Electronics (General), Engineering/Construction, Farming/Agriculture, Food Processing, Food Wholesalers, Furn/Home Furnishings, Homebuilding, Hotel/Gaming, Household Products, Information Services, Machinery, Metals & Mining, Office Equipment & Services, Paper/Forest Products, Power, Real Estate (Operations & Services), Recreation, Restaurant/Dining, Retail (Automotive), Retail (Building Supply), Retail (Distributors), Retail (General), Retail (Special Lines), Rubber& Tires, Semiconductor, Semiconductor Equip, Software (System & Application), Steel, Transportation, Trucking
+            Text from document:
+            {first_150_lines}
+
+            Return ONLY this JSON structure:
+            {{
+                "accounting_period": "string",
+                "company_name": "string",
+                "legal_form": "string",
+                "main_activities": ["string", "string", ...],
+                "employees": number or null,
+                "established": "string",
+                "headquarters": "string",
+                "industry": "string"
+            }}
+
+            If a value cannot be found, use null for strings and numbers, and an empty list for main_activities. For industry even if 
+            you dont find exact match try to infer it from what company does based on description. Use fallback Manufacturing if nothing found.
+            """
             
-            for pattern in company_patterns:
-                match = re.search(pattern, all_text, re.IGNORECASE)
-                if match:
-                    result['company_name'] = match.group(1).strip()
-                    break
+            # Call the LLM
+            response = self.client.chat.completions.create(
+                model="gpt-4",
+                messages=[
+                    {"role": "system", "content": "You are a precise data extraction assistant. Follow instructions exactly."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.1,  # Low temperature for precision
+                max_tokens=500   # Enough for a detailed JSON response
+            )
             
-            # Extract year/accounting period
-            year_pattern = r'(?:rok|year|období|period)\s*(20\d{2})'
-            year_match = re.search(year_pattern, all_text, re.IGNORECASE)
-            if year_match:
-                result['accounting_period'] = year_match.group(1)
+            # Parse the LLM response
+            try:
+                llm_data = json.loads(response.choices[0].message.content)
+                # Ensure all required fields are present, even if null
+                for key in result.keys():
+                    if key in llm_data:
+                        result[key] = llm_data[key]
+                    else:
+                        logger.warning(f"LLM did not return required field: {key}")
+                return result
+            except json.JSONDecodeError as e:
+                logger.error(f"Failed to parse LLM response: {e}")
+                return result
+        
+        except Exception as e:
+            logger.error(f"Error in LLM company information extraction: {e}")
+            return result
+                
             
-            # Only proceed with OpenAI if we have a client and are missing information
-            if self.client and (not result['company_name'] or not result['accounting_period']):
-                # ... existing OpenAI code ...
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+    def _extract_industry_with_fallbacks(self, soup: BeautifulSoup) -> Optional[str]:
+        """Extract industry information using multiple fallback strategies."""
+        # Strategy 1: Look for industry keywords in the document
+        industry_keywords = [
+            r'(?:Odvětví|Sektor|Industry):\s*([^\n\.]+)',
+            r'(?:NACE|CZ-NACE|Obor podnikání):\s*([^\n\.]+)',
+            r'(?:Oblast podnikání|Klasifikace):\s*([^\n\.]+)'
+        ]
+        
+        all_text = soup.get_text()
+        
+        for pattern in industry_keywords:
+            match = re.search(pattern, all_text, re.IGNORECASE)
+            if match:
+                return match.group(1).strip()
+        
+        # Strategy 2: Use company description to infer industry
+        company_info = self.financial_data['information']
+        if 'main_activities' in company_info and company_info['main_activities']:
+            # Mapping of keywords to industries
+            industry_map = {
+                'stínicí': 'Building Materials',
+                'žaluzií': 'Building Materials',
+                'stavební': 'Construction',
+                'výroba': 'Manufacturing',
+                'software': 'Technology',
+                'IT': 'Technology',
+                'potravin': 'Food Production',
+                'retail': 'Retail',
+                'obchod': 'Retail',
+                'finanční': 'Financial Services',
+                'bankov': 'Banking',
+                'energeti': 'Energy',
+                'doprav': 'Transportation'
+            }
+            
+            for activity in company_info['main_activities']:
+                for keyword, industry in industry_map.items():
+                    if keyword.lower() in activity.lower():
+                        return industry
+        
+        # Strategy 3: Use LLM (most comprehensive)
+        if self.client:
+            try:
+                # Get document excerpts that might contain industry information
+                # Look for headers, company description, or summary sections
+                potential_sections = []
+                
+                # Find company description or "about us" section
+                description_headers = ['O společnosti', 'Profil společnosti', 'Základní údaje']
+                for header in description_headers:
+                    header_elem = soup.find(string=re.compile(header, re.IGNORECASE))
+                    if header_elem:
+                        # Extract next few paragraphs
+                        parent = header_elem.parent
+                        context = header_elem.get_text() + "\n"
+                        for sibling in parent.find_next_siblings():
+                            if sibling.name in ['p', 'div'] and len(context) < 2000:
+                                context += sibling.get_text() + "\n"
+                        potential_sections.append(context)
+                
+                # Try to extract from any preamble or introduction
+                intro_section = soup.find_all(['p', 'div'], limit=10)
+                intro_text = "\n".join([section.get_text() for section in intro_section])
+                if len(intro_text) > 100:  # Only if it's substantial
+                    potential_sections.append(intro_text[:2000])
+                
+                # If no sections, use first 2000 characters of document
+                if not potential_sections:
+                    potential_sections.append(all_text[:2000])
+                
+                # Use company name to help identification
+                company_name = company_info.get('company_name', 'Unknown Company')
+                
+                # Prepare the context
+                context = f"Company name: {company_name}\n\n"
+                context += "Document excerpts:\n" + "\n---\n".join(potential_sections[:3])  # Limit to 3 sections
+                
+                prompt = f"""
+                Based on the following information from a Czech financial report, determine the industry of the company.
+                
+                {context}
+                
+                Identify the industry and return ONLY one of the following industries that best matches:
+                - Agriculture
+                - Automotive
+                - Banking
+                - Building Materials
+                - Chemicals
+                - Construction
+                - Consumer Goods
+                - Energy
+                - Financial Services
+                - Food Production
+                - Healthcare
+                - Hospitality
+                - Information Technology
+                - Insurance
+                - Manufacturing
+                - Media
+                - Mining
+                - Pharmaceuticals
+                - Real Estate
+                - Retail
+                - Technology
+                - Telecommunications
+                - Transportation
+                - Utilities
+                
+                If absolutely none of these match, return "Other Manufacturing".
+                Return just the industry name, nothing else.
+                """
+                
                 response = self.client.chat.completions.create(
-                    model="gpt-4",
-                    messages=[{"role": "user", "content": prompt}],
-                    temperature=0.3
+                    model="gpt-3.5-turbo",  # Using 3.5 for cost efficiency, adjust as needed
+                    messages=[
+                        {"role": "system", "content": "You analyze financial documents to determine the company's industry."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    temperature=0.1,
+                    max_tokens=20  # Just need a short answer
                 )
                 
-                try:
-                    api_response = json.loads(response.choices[0].message.content)
-                    # Update result only for non-None values from API
-                    for key, value in api_response.items():
-                        if value is not None:
-                            result[key] = value
-                except json.JSONDecodeError as e:
-                    logger.error(f"Failed to parse OpenAI response: {e}")
-                    # Continue with what we have from direct extraction
-            
-            # Fallback values if still missing required fields
-            if not result['company_name']:
-                # Try to find any company-like name in the text
-                company_candidates = re.findall(r'([A-Z][A-Za-z\s\.]+(?:a\.s\.|s\.r\.o\.|spol\. s r\.o\.))', all_text)
-                if company_candidates:
-                    result['company_name'] = company_candidates[0].strip()
+                industry = response.choices[0].message.content.strip()
+                # Check if the response contains only the industry name
+                if industry in [
+                    "Agriculture", "Automotive", "Banking", "Building Materials", 
+                    "Chemicals", "Construction", "Consumer Goods", "Energy", 
+                    "Financial Services", "Food Production", "Healthcare", 
+                    "Hospitality", "Information Technology", "Insurance", 
+                    "Manufacturing", "Media", "Mining", "Pharmaceuticals", 
+                    "Real Estate", "Retail", "Technology", "Telecommunications", 
+                    "Transportation", "Utilities", "Other Manufacturing"
+                ]:
+                    return industry
                 else:
-                    result['company_name'] = "Unknown Company"
+                    logger.warning(f"LLM returned invalid industry format: {industry}")
+                
+            except Exception as e:
+                logger.error(f"Error in industry LLM extraction: {e}")
+        
+        # If all strategies fail, return a default
+        return "Manufacturing"  # Most common default
+    
+    
+    
+    def _validate_and_fix_required_fields(self, soup: BeautifulSoup) -> None:
+        """Validate and fix required fields using fallback mechanisms."""
+        # Define required fields for each section
+        required_fields = {
+            'income_statement': [
+                'depreciation_current',
+                'operating_profit_current'
+            ],
+            'balance_sheet': [
+                'total_assets_current'
+            ],
+            'information': [
+                'company_name',
+                'accounting_period',
+                'industry'  # This field is critical as mentioned
+            ]
+        }
+        
+        # Check income statement required fields
+        missing_income = [field for field in required_fields['income_statement'] 
+                        if field not in self.financial_data['income_statement']]
+        if missing_income and self.client:
+            logger.warning(f"Missing required income statement fields: {missing_income}. Trying LLM fallback.")
+            self._extract_income_statement_llm(soup)
+        
+        # Check balance sheet required fields
+        missing_balance = [field for field in required_fields['balance_sheet'] 
+                        if field not in self.financial_data['balance_sheet']]
+        if missing_balance and self.client:
+            logger.warning(f"Missing required balance sheet fields: {missing_balance}. Trying LLM fallback.")
+            self._extract_balance_sheet_llm(soup)
+        
+        # Check company information required fields - special focus on industry
+        info = self.financial_data['information']
+        if 'industry' not in info or not info['industry']:
+            logger.warning("Missing critical field: industry. Attempting special extraction.")
+            industry = self._extract_industry_with_fallbacks(soup)
+            if industry:
+                self.financial_data['information']['industry'] = industry
+    
+    
+    def _perform_final_validation(self) -> None:
+        """Perform final validation and log issues instead of raising exceptions."""
+        critical_fields = [
+            ('income_statement', ['revenue_from_products_and_services_current', 'operating_profit_current']),
+            ('balance_sheet', ['total_assets_current']),
+            ('information', ['company_name', 'accounting_period', 'industry'])
+        ]
+        
+        missing_fields = []
+        
+        for section, fields in critical_fields:
+            for field in fields:
+                if section not in self.financial_data or field not in self.financial_data[section] or self.financial_data[section][field] is None:
+                    missing_fields.append(f"{section}.{field}")
+        
+        if missing_fields:
+            logger.warning(f"Some critical financial data fields missing: {', '.join(missing_fields)}. Proceeding with available data.")
+        else:
+            logger.info("All critical financial data fields present.")
             
-            if not result['accounting_period']:
-                # Default to current year
-                from datetime import datetime
-                result['accounting_period'] = str(datetime.now().year)
+    
+    
+    
+    
+    def _extract_income_statement_llm(self, soup: BeautifulSoup) -> None:
+        """Extract income statement data using LLM as a fallback."""
+        if not self.client:
+            logger.error("OpenAI client not available for LLM fallback")
+            return
+        
+        try:
+            # Find potential income statement sections
+            all_text = soup.get_text()
+            text_blocks = all_text.split('\n')
             
-            return result
+            income_keywords = ['VÝKAZ ZISKU A ZTRÁT', 'Výkaz zisku a ztráty', 'Income Statement', 'Výsledovka']
+            
+            # Find sections that contain income statement keywords
+            potential_sections = []
+            for i, block in enumerate(text_blocks):
+                if any(keyword.lower() in block.lower() for keyword in income_keywords):
+                    # Take a larger context (220 lines) to ensure we capture the full statement
+                    context = '\n'.join(text_blocks[i:i+220])
+                    potential_sections.append(context)
+            
+            if not potential_sections:
+                logger.warning("No income statement sections found for LLM extraction")
+                return
+            
+            # Use the first potential section (or combine multiple if they're short)
+            combined_context = '\n'.join(potential_sections[:2])  # Use up to 2 sections
+            
+            prompt = f"""
+            Extract key financial metrics from this income statement (Výkaz zisku a ztráty).
+            The text is in Czech and might contain OCR errors.
+            
+            Please extract these specific values for the CURRENT year only:
+            1. Revenue from products and services (Tržby z prodeje výrobků a služeb)
+            2. Revenue from goods (Tržby za prodej zboží)
+            3. Production consumption (Výkonová spotřeba)
+            4. Personnel costs (Osobní náklady)
+            5. Wage costs (Mzdové náklady)
+            6. Depreciation (Odpisy)
+            7. Operating profit (Provozní výsledek hospodaření)
+            8. EBIT (same as operating profit)
+            
+            Text from document:
+            {combined_context}
+            
+            Return ONLY a JSON object with these keys:
+            {{
+                "revenue_from_products_and_services_current": number,
+                "revenue_from_goods_current": number,
+                "production_consumption_current": number,
+                "personnel_costs_current": number,
+                "wage_costs_current": number,
+                "depreciation_current": number,
+                "operating_profit_current": number,
+                "ebit_current": number
+            }}
+            
+            If a value cannot be found, use null. Remove any thousands separators and convert to integers.
+            """
+            
+            response = self.client.chat.completions.create(
+                model="gpt-4",
+                messages=[
+                    {"role": "system", "content": "You are a financial data extraction assistant."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.1
+            )
+            
+            try:
+                llm_extracted_data = json.loads(response.choices[0].message.content)
+                
+                # Merge with existing income statement data, prioritizing existing values
+                current_data = self.financial_data['income_statement']
+                for key, value in llm_extracted_data.items():
+                    if value is not None and key not in current_data:
+                        current_data[key] = value
+                
+                # Make sure EBIT is same as operating profit if one is missing
+                if 'operating_profit_current' in current_data and 'ebit_current' not in current_data:
+                    current_data['ebit_current'] = current_data['operating_profit_current']
+                elif 'ebit_current' in current_data and 'operating_profit_current' not in current_data:
+                    current_data['operating_profit_current'] = current_data['ebit_current']
+                
+                logger.info("Successfully extracted missing income statement data using LLM")
+            except json.JSONDecodeError as e:
+                logger.error(f"Failed to parse LLM income statement response: {e}")
             
         except Exception as e:
-            logger.error(f"Error extracting company information: {e}")
-            # Return default values instead of raising
-            return {
-                "accounting_period": str(datetime.now().year),
-                "company_name": "Unknown Company",
-                "legal_form": "Unknown",
-                "main_activities": [],
-                "employees": None,
-                "established": None,
-                "headquarters": None,
-                "industry": "Unknown"
-            }
+            logger.error(f"Error in income statement LLM extraction: {e}")
+
+    def _extract_balance_sheet_llm(self, soup: BeautifulSoup) -> None:
+        """Extract balance sheet data using LLM as a fallback."""
+        if not self.client:
+            logger.error("OpenAI client not available for LLM fallback")
+            return
+        
+        try:
+            # Find potential balance sheet sections
+            all_text = soup.get_text()
+            text_blocks = all_text.split('\n')
+            
+            balance_keywords = ['ROZVAHA', 'Rozvaha', 'Balance Sheet', 'AKTIVA', 'PASIVA']
+            
+            # Find sections that contain balance sheet keywords
+            potential_sections = []
+            for i, block in enumerate(text_blocks):
+                if any(keyword.lower() in block.lower() for keyword in balance_keywords):
+                    # Take a larger context to ensure we capture the full statement
+                    context = '\n'.join(text_blocks[i:i+120])
+                    potential_sections.append(context)
+            
+            if not potential_sections:
+                logger.warning("No balance sheet sections found for LLM extraction")
+                return
+            
+            # Use the first potential section (or combine multiple if needed)
+            combined_context = '\n'.join(potential_sections[:2])
+            
+            prompt = f"""
+            Extract key financial metrics from this balance sheet (Rozvaha).
+            The text is in Czech and might contain OCR errors.
+            
+            Please extract these specific values for both the CURRENT and PREVIOUS years:
+            1. Total assets (AKTIVA CELKEM)
+            2. Intangible assets (Dlouhodobý nehmotný majetek)
+            3. Tangible assets (Dlouhodobý hmotný majetek)
+            4. Current assets (Oběžná aktiva)
+            
+            Text from document:
+            {combined_context}
+            
+            Return ONLY a JSON object with these keys:
+            {{
+                "total_assets_current": number,
+                "total_assets_previous": number,
+                "intangible_assets_current": number,
+                "intangible_assets_previous": number,
+                "tangible_assets_current": number,
+                "tangible_assets_previous": number,
+                "current_assets_current": number,
+                "current_assets_previous": number
+            }}
+            
+            If a value cannot be found, use null. Remove any thousands separators and convert to integers.
+            """
+            
+            response = self.client.chat.completions.create(
+                model="gpt-4",
+                messages=[
+                    {"role": "system", "content": "You are a financial data extraction assistant."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.1
+            )
+            
+            try:
+                llm_extracted_data = json.loads(response.choices[0].message.content)
+                
+                # Merge with existing balance sheet data, prioritizing existing values
+                current_data = self.financial_data['balance_sheet']
+                for key, value in llm_extracted_data.items():
+                    if value is not None and key not in current_data:
+                        current_data[key] = value
+                
+                logger.info("Successfully extracted missing balance sheet data using LLM")
+            except json.JSONDecodeError as e:
+                logger.error(f"Failed to parse LLM balance sheet response: {e}")
+            
+        except Exception as e:
+            logger.error(f"Error in balance sheet LLM extraction: {e}")
+                    
+                
+                
+                
 
 # Example usage
 if __name__ == "__main__":

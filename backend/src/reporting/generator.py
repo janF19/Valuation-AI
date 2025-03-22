@@ -63,7 +63,7 @@ class ReportGenerator:
         # Define metrics with fallback values
         key_metrics = [
             ('Revenue', metrics.get('revenue_from_products_and_services_current', 'N/A')),
-            ('EBIT', metrics.get('ebit_current', 'N/A')),
+            ('EBIT', metrics.get('operating_profit_current', 'N/A')),
             ('Operating Profit', metrics.get('operating_profit_current', 'N/A'))
         ]
         
@@ -138,7 +138,7 @@ class ReportGenerator:
         
         # Safely get metrics with default values
         revenue = metrics.get('revenue_from_products_and_services_current', 'N/A')
-        ebit = metrics.get('ebit_current', 'N/A')
+        ebit = metrics.get('operating_profit_current', 'N/A')
         operating_profit = metrics.get('operating_profit_current', 'N/A')
         
         # Format values only if they are numeric

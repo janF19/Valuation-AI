@@ -45,14 +45,80 @@ class CompanyValuator:
             "computers/peripherals": (26.23, 29.46),
             "construction supplies": (13.37, 16.20),
             "diversified": (8.70, 8.82),
-            "drugs (biotechnology)": (62.25, None),  # NA value for EV/EBIT
             "drugs (pharmaceutical)": (18.96, 24.05),
-            # Add more industries as needed
+            "education": (22.90, 29.60),
+            "electrical equipment": (30.40, 44.79),
+            "electronics (general)": (19.60, 29.68),
+            "engineering/construction": (19.55, 24.14),
+            "entertainment": (24.18, 48.00),
+            "environmental & waste services": (17.94, 24.42),
+            "farming/agriculture": (10.79, 15.92),
+            "financial svcs. (non-bank & insurance)": (106.22, 117.65),
+            "food processing": (12.30, 14.84),
+            "food wholesalers": (12.03, 16.86),
+            "furn/home furnishings": (12.31, 17.44),
+            "green & renewable energy": (11.70, 32.28),
+            "healthcare products": (24.93, 34.70),
+            "healthcare support services": (11.67, 15.34),
+            "heathcare information and technology": (25.45, 39.63),
+            "homebuilding": (8.02, 7.98),
+            "hospitals/healthcare facilities": (9.69, 12.22),
+            "hotel/gaming": (18.42, 28.85),
+            "household products": (16.43, 19.04),
+            "information services": (13.36, 18.68),
+            "insurance (general)": (14.42, 18.88),
+            "insurance (life)": (19.88, 15.00),
+            "insurance (prop/cas.)": (15.99, 11.01),
+            "investments & asset management": (49.81, 42.69),
+            "machinery": (17.29, 20.20),
+            "metals & mining": (11.26, 12.76),
+            "office equipment & services": (10.71, 14.18),
+            "oil/gas (integrated)": (6.76, 11.06),
+            "oil/gas (production and exploration)": (5.78, 10.24),
+            "oil/gas distribution": (10.56, 17.51),
+            "oilfield svcs/equip.": (5.65, 11.75),
+            "packaging & container": (9.56, 15.43),
+            "paper/forest products": (8.65, 11.96),
+            "power": (13.18, 21.98),
+            "precious metals": (15.22, 16.21),
+            "publishing & newspapers": (12.90, 19.35),
+            "r.e.i.t.": (24.28, 48.73),
+            "real estate (development)": (21.72, 29.35),
+            "real estate (general/diversified)": (21.41, 36.45),
+            "real estate (operations & services)": (47.80, 112.85),
+            "recreation": (13.60, 26.61),
+            "reinsurance": (9.62, 11.59),
+            "restaurant/dining": (22.85, 32.16),
+            "retail (automotive)": (16.53, 21.82),
+            "retail (building supply)": (16.81, 21.02),
+            "retail (distributors)": (14.95, 16.82),
+            "retail (general)": (23.80, 34.67),
+            "retail (grocery and food)": (10.76, 16.89),
+            "retail (reits)": (18.96, 32.77),
+            "retail (special lines)": (15.69, 20.17),
+            "rubber& tires": (7.89, 14.19),
+            "semiconductor": (46.76, 49.27),
+            "semiconductor equip": (18.23, 20.96),
+            "shipbuilding & marine": (11.05, 11.68),
+            "shoe": (15.65, 18.46),
+            "software (entertainment)": (24.22, 22.84),
+            "software (internet)": (97.97, 97.97),
+            "software (system & application)": (34.12, 40.13),
+            "steel": (5.55, 11.61),
+            "telecom (wireless)": (12.46, 21.97),
+            "telecom. equipment": (23.94, 30.79),
+            "telecom. services": (7.44, 12.39),
+            "tobacco": (12.95, 13.43),
+            "transportation": (13.92, 22.83),
+            "transportation (railroads)": (13.44, 16.40),
+            "trucking": (11.97, 25.32),
+            "utility (general)": (13.39, 22.71),
+            "utility (water)": (16.85, 22.73),
         }
         
         # Default multiples if the industry is not found
-        default_ev_ebitda = 22.86  # Total Market value
-        default_ev_ebit = 30.33    # Total Market value
+        default_ev_ebitda = 18.53  # Total Market value
+        default_ev_ebit = 25.16    # Total Market value
         
         # Try to find the industry in our dictionary
         for ind, multiples in industry_multiples.items():
@@ -131,7 +197,7 @@ class CompanyValuator:
                 #fallback is last year
                 period = 2024
             
-            operating_profit = self.financial_data['income_statement']['ebit_current']
+            operating_profit = self.financial_data['income_statement']['operating_profit_current']
             depreciation_amortization = self.financial_data['income_statement']['depreciation_current']
             industry = self.financial_data['information']['industry']
             
