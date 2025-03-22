@@ -1,0 +1,2511 @@
+
+
+prompt 
+
+
+
+
+I need your help working on new app. It is financial valuation program that takes financial pdfs process them and outout valuation a report on company.
+Note I already have code that takes file and using OCR outputs html file, but now I need to process those html files. 
+
+The repo looks like this 
+python scripts/tree.py
+
+📁 Project Structure for: C:\Users\falle\projects\financeAI\financial-valuation-system
+
+📄 .env
+📁 api
+    📁 openapi
+        📄 examples
+        📄 specification.yaml
+    📁 postman
+        📄 collection.json
+        📄 environment.json
+📁 backend
+    📁 config
+        📄 __init__.py
+        📄 database.py
+        📄 secrets.py
+        📄 settings.py
+    📁 data
+    📄 main.py
+    📁 migrations
+    📄 requirements.txt
+    📁 script_results
+        📄 index.html
+    📄 setup.py
+    📁 src
+        📄 __init__.py
+        📁 api
+            📄 __init__.py
+            📄 config.py
+            📁 endpoints
+            📄 main.py
+            📁 middleware
+                📄 __init__.py
+                📄 auth.py
+                📄 logging.py
+            📁 models
+                📄 __init__.py
+                📄 company.py
+                📄 user.py
+                📄 valuation.py
+            📁 routers
+                📄 __init__.py
+                📄 auth.py
+                📄 reports.py
+                📄 valuations.py
+            📁 schemas
+                📄 __init__.py
+                📄 request.py
+                📄 response.py
+        📁 dcf
+            📄 __init__.py
+            📄 assumptions.py
+            📄 calculator.py
+        📁 financials
+            📄 __init__.py
+            📄 analytics.py
+            📄 extractor.py
+        📁 ocr
+            📄 __init__.py
+            📄 features.md
+            📄 mistral_processor.py
+            📄 parsers.py
+            📄 processing.py
+        📁 reporting
+            📄 __init__.py
+            📄 formatter.py
+            📄 generator.py
+        📁 utils
+            📄 __init__.py
+            📄 auth.py
+            📄 helpers.py
+            📄 validators.py
+    📁 tests
+        📄 __init__.py
+        📁 backend
+            📁 tests
+                📁 results
+                    📄 output2.html
+        📄 conftest.py
+        📁 results
+            📄 output.html
+            📄 output2.html
+            📄 output_vz_2021_isotra.html
+            📄 output_vz_2022_isotra.html
+            📄 output_vz_2023_isotra.html
+        📄 test_api.py
+        📄 test_dcf.py
+        📄 test_financials.py
+        📄 test_ocr.py
+        📁 testFinancials
+            📄 vz_2019_isotra.pdf
+            📄 vz_2020_isotra.pdf
+            📄 vz_2021_isotra.pdf
+            📄 vz_2022_isotra.pdf
+            📄 vz_2023_isotra.pdf
+        📄 testWorkflow.py
+📁 docker
+    📁 compose-files
+    📁 config
+📁 docs
+📁 frontend
+📄 poetry.lock
+📄 pyproject.toml
+📄 readme.md
+📁 scripts
+    📄 differ.py
+    📄 isotra_2023.html
+    📄 mistral_ocr.py
+    📄 output2.html
+    📄 tree.py
+📄 starter.sh   
+(financeai-py3.12) PS C:\Users\falle\projects\financeAI\financial-valuation-system>            
+Ocr is implemented now it is time to implement extractor in financial dir but it will be very complex code perhaps many files to get it right since it is complicated see below the specifications.
+
+ I need help I have following financials for 5 years in czech and I am working on app that based on those financials valueates company using 3 approaches - dcf, multiples and based on assets and finally writes short report about what was going on with the company - few paragraphs based on the text and than based on financial numbers and lastly some paragrafs where it tries to find some hidden skeleton in closet or issue. Som it will produce report. Now obviosly It will use llm api call but I need it to orchestarte etc. and prepare and programatically give llm correct information to produce best result (perhaps even use open ai data analyst python feature) so since I have those files in html I can programatically say take balance sheet from every file and pass it to llm to give you information about changes in capex investments ( or grab it from cash flow statements even better) than compute capes investment which is used for DCF. Or grab from income statements EBIT make some calculations with it, fetch growth rate from internet and than valuate it using multiples valuattion or take look into balance sheet discount liabilities apply some discounts and derive value of assets etc. the goal is to valuate company and write that report. That’s goal, obviously I can not do it straight but have to make small steps and do testing so I figured I might start with just getting the relevant data from financial reports and save it to file and than I check if it works. Next step is to perform those calculations and saving results, obvisouly I have to do it programatically as well as using LLms and than finally based on all those results I write valuation report and also use some relevant pieces from financial reports to write those other paragraphs I meantioned earlier (about whats going on with company ect) 
+
+ Note that to make it more precise maybe better might be to make llm api call to get the data from documents I need (income, assets, EBIT, etc. )save output temporarily for testing and than either make calculation programatically or using llm (I know that llm suck at doing math so I better do it myself and alternatively use LLM - I heared some llms have acess to python interpreter to make math and finally check these 2 approaches.     so give me something but go step by step since i want to make incremental changes and slow progress and test everything so that it is working as desired       example of report    i provide some chunks of html input file example for analyzing where the data is <h1>PŘEHLED O PĚNĚŽNICH TOCÍCH</h1>
+<p>Ke dni 31. 12. 2023
+(v celých tis. Kč)</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: center;">Ozn.</th>
+<th style="text-align: center;"></th>
+<th style="text-align: center;"></th>
+<th style="text-align: center;">TEXT</th>
+<th style="text-align: center;">Číslo řádku</th>
+<th style="text-align: center;">Bě̌né účetní obdobi</th>
+<th style="text-align: center;">Minuté účetní obdobi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;">a</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">b</td>
+<td style="text-align: center;">c</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+</tr>
+<tr>
+<td style="text-align: center;">P.</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">Počáteční stav peněžnich prostředkô</td>
+<td style="text-align: center;">01</td>
+<td style="text-align: center;">14911</td>
+<td style="text-align: center;">18595</td>
+</tr>
+<tr>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">Peněǎní toky z hlavní výddlečné činnosti (provozní činnost)</td>
+<td style="text-align: center;">02</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+</tr>
+<tr>
+<td style="text-align: center;">Z.</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">Účetní zisk nebo ztráta před zdaněním</td>
+<td style="text-align: center;">03</td>
+<td style="text-align: center;">67889</td>
+<td style="text-align: center;">83575</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.</td>
+<td style="text-align: center;">1.</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">Úpravy o nepeněǎní operace</td>
+<td style="text-align: center;">04</td>
+<td style="text-align: center;">61139</td>
+<td style="text-align: center;">52841</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.</td>
+<td style="text-align: center;">1.</td>
+<td style="text-align: center;">1.</td>
+<td style="text-align: center;">Odpisy stálých aktiv</td>
+<td style="text-align: center;">05</td>
+<td style="text-align: center;">48714</td>
+<td style="text-align: center;">44750</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.</td>
+<td style="text-align: center;">1.</td>
+<td style="text-align: center;">2.</td>
+<td style="text-align: center;">Změna stavu opravných polożek a rezerv</td>
+<td style="text-align: center;">06</td>
+<td style="text-align: center;">5074</td>
+<td style="text-align: center;">4596</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.</td>
+<td style="text-align: center;">1.</td>
+<td style="text-align: center;">3.</td>
+<td style="text-align: center;">Zisk (ztráta) z prodeje stálých aktiv</td>
+<td style="text-align: center;">07</td>
+<td style="text-align: center;">$-1506$</td>
+<td style="text-align: center;">$-866$</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.</td>
+<td style="text-align: center;">1.</td>
+<td style="text-align: center;">4.</td>
+<td style="text-align: center;">Výnasy z dividend a podlá na zisku</td>
+<td style="text-align: center;">08</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.</td>
+<td style="text-align: center;">1.</td>
+<td style="text-align: center;">5.</td>
+<td style="text-align: center;">Nákiadové a výnosové úroky</td>
+<td style="text-align: center;">09</td>
+<td style="text-align: center;">8857</td>
+<td style="text-align: center;">3041</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.</td>
+<td style="text-align: center;">1.</td>
+<td style="text-align: center;">6.</td>
+<td style="text-align: center;">Úpravy o ostatní nepeněǎní operace</td>
+<td style="text-align: center;">10</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">1319</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.</td>
+<td style="text-align: center;">*</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">Čistý penĕżní tok z provozní činnosti před zdaněním a změnami pracovního kapitálu</td>
+<td style="text-align: center;">11</td>
+<td style="text-align: center;">129028</td>
+<td style="text-align: center;">143541</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.</td>
+<td style="text-align: center;">2.</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">Změna stavu pracovního kapitálu</td>
+<td style="text-align: center;">12</td>
+<td style="text-align: center;">38554</td>
+<td style="text-align: center;">$-77305$</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.</td>
+<td style="text-align: center;">2.</td>
+<td style="text-align: center;">1.</td>
+<td style="text-align: center;">Změna stavu pohledávek, časového rozlišení aktiv a dohadných úctô aktivnich</td>
+<td style="text-align: center;">13</td>
+<td style="text-align: center;">$-48314$</td>
+<td style="text-align: center;">$-14464$</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.</td>
+<td style="text-align: center;">2.</td>
+<td style="text-align: center;">2.</td>
+<td style="text-align: center;">Změna stavu závazkô, časového rozlišení pasiv a dohadných úctô pasivnich</td>
+<td style="text-align: center;">14</td>
+<td style="text-align: center;">17349</td>
+<td style="text-align: center;">$-26030$</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.</td>
+<td style="text-align: center;">2.</td>
+<td style="text-align: center;">3.</td>
+<td style="text-align: center;">Změna stavu zásob</td>
+<td style="text-align: center;">15</td>
+<td style="text-align: center;">69519</td>
+<td style="text-align: center;">$-36811$</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.</td>
+<td style="text-align: center;">2.</td>
+<td style="text-align: center;">4.</td>
+<td style="text-align: center;">Změna stavu krátkodobého finančního majetku</td>
+<td style="text-align: center;">16</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.</td>
+<td style="text-align: center;">**</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">Čistý penĕżní tok z provozní činnosti před zdaněním</td>
+<td style="text-align: center;">17</td>
+<td style="text-align: center;">167582</td>
+<td style="text-align: center;">66235</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.</td>
+<td style="text-align: center;">3.</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">Vyplacené úroky</td>
+<td style="text-align: center;">18</td>
+<td style="text-align: center;">$-8991$</td>
+<td style="text-align: center;">$-9128$</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.</td>
+<td style="text-align: center;">4.</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">Přijaté úroky</td>
+<td style="text-align: center;">19</td>
+<td style="text-align: center;">134</td>
+<td style="text-align: center;">982</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.</td>
+<td style="text-align: center;">5.</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">Zaplacená daň z přijmô</td>
+<td style="text-align: center;">20</td>
+<td style="text-align: center;">$-15509$</td>
+<td style="text-align: center;">$-13134$</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.</td>
+<td style="text-align: center;">6.</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">Přijaté podíly na zisku a dividendy</td>
+<td style="text-align: center;">21</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.</td>
+<td style="text-align: center;">***</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">Čistý penĕżní tok z provozní činnosti</td>
+<td style="text-align: center;">22</td>
+<td style="text-align: center;">143216</td>
+<td style="text-align: center;">44955</td>
+</tr>
+<tr>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">Penĕżní toky z investiční činnosti</td>
+<td style="text-align: center;">23</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+</tr>
+<tr>
+<td style="text-align: center;">B.</td>
+<td style="text-align: center;">1.</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">Výdaje spojené s nabytím stálých aktiv</td>
+<td style="text-align: center;">24</td>
+<td style="text-align: center;">$-56594$</td>
+<td style="text-align: center;">$-76263$</td>
+</tr>
+<tr>
+<td style="text-align: center;">B.</td>
+<td style="text-align: center;">2.</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">Pr̛i̇my z prodeje stálých aktiv</td>
+<td style="text-align: center;">25</td>
+<td style="text-align: center;">2209</td>
+<td style="text-align: center;">723</td>
+</tr>
+<tr>
+<td style="text-align: center;">B.</td>
+<td style="text-align: center;">3.</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">Zápáçčky a úvěry spřiměným osobám</td>
+<td style="text-align: center;">26</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">B.</td>
+<td style="text-align: center;">***</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">Čistý penĕżní tok z investiční činnosti</td>
+<td style="text-align: center;">27</td>
+<td style="text-align: center;">$-54385$</td>
+<td style="text-align: center;">$-75540$</td>
+</tr>
+<tr>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">Penĕżní toky z finančních činností</td>
+<td style="text-align: center;">28</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+</tr>
+<tr>
+<td style="text-align: center;">C.</td>
+<td style="text-align: center;">1.</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">Změna stavu závazkô z financování</td>
+<td style="text-align: center;">29</td>
+<td style="text-align: center;">$-69837$</td>
+<td style="text-align: center;">56901</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.</td>
+<td style="text-align: center;">2.</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">Dopady změn vlastniho kapitálu</td>
+<td style="text-align: center;">30</td>
+<td style="text-align: center;">$-20000$</td>
+<td style="text-align: center;">$-30000$</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.</td>
+<td style="text-align: center;">2.</td>
+<td style="text-align: center;">1.</td>
+<td style="text-align: center;">Peněǎní zvýšení základního kapitálu</td>
+<td style="text-align: center;">31</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.</td>
+<td style="text-align: center;">2.</td>
+<td style="text-align: center;">2.</td>
+<td style="text-align: center;">Vyplacení podílu na vlastním kapitálu společníkům</td>
+<td style="text-align: center;">32</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.</td>
+<td style="text-align: center;">2.</td>
+<td style="text-align: center;">3.</td>
+<td style="text-align: center;">Daší vklady penĕżních prostředkô společniků a akcionářů</td>
+<td style="text-align: center;">33</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.</td>
+<td style="text-align: center;">2.</td>
+<td style="text-align: center;">4.</td>
+<td style="text-align: center;">Úhrada ztráty společníky</td>
+<td style="text-align: center;">34</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.</td>
+<td style="text-align: center;">2.</td>
+<td style="text-align: center;">5.</td>
+<td style="text-align: center;">Výdaje z kapitálových fondů</td>
+<td style="text-align: center;">35</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.</td>
+<td style="text-align: center;">2.</td>
+<td style="text-align: center;">6.</td>
+<td style="text-align: center;">Vyplacené podíly na zisku a dividendy</td>
+<td style="text-align: center;">36</td>
+<td style="text-align: center;">$-20000$</td>
+<td style="text-align: center;">$-30000$</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th style="text-align: center;">Ozn.</th>
+<th style="text-align: center;"></th>
+<th style="text-align: center;"></th>
+<th style="text-align: center;">TEXT</th>
+<th style="text-align: center;"></th>
+<th style="text-align: center;"></th>
+<th style="text-align: center;"></th>
+<th style="text-align: center;"></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;">a</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">b</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">c</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+</tr>
+<tr>
+<td style="text-align: center;">C</td>
+<td style="text-align: center;">・・</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">Ćstý penĕ̌ni tok z finančnĭ çinnosti</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">37</td>
+<td style="text-align: center;">$-89837$</td>
+<td style="text-align: center;">26901</td>
+</tr>
+<tr>
+<td style="text-align: center;">F</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">Ćstă zmĕna penĕ̌nich prostředkã</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">38</td>
+<td style="text-align: center;">$-1006$</td>
+<td style="text-align: center;">$-3684$</td>
+</tr>
+<tr>
+<td style="text-align: center;">R</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">Konečnÿ stav penĕ̌nich prostĭedkã</td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">39</td>
+<td style="text-align: center;">13905</td>
+<td style="text-align: center;">14911</td>
+</tr>
+</tbody>
+</table>
+<p>Sestaveno dne:
+Prăvni forma účetni jednotky:
+Spisová značka:
+Předmět podnikǔní účetni jednotky:
+Podpisový záznam:
+22. 5. 2024</p>
+<p>Akciová společnost
+B 3169 vedená u Krajského soudu v Ostravě
+Výroba a montáž stínić techniky
+Ing. Bohumir Blachut, předseda představenstva
+<img alt="img-10.jpeg" src="img-10.jpeg" /></p>
+<h1>PŘEHLED O ZMĚNÁCH VLASTNÍHO KAPITÁLU</h1>
+<p>Ke dni 31. 12. 2023.
+(v celých tis K2)
+<img alt="img-11.jpeg" src="img-11.jpeg" /></p>
+<p>Sestaveno dne:
+Právní forma účetní jednotky:
+Spisová značka:
+Předmět podnikání účetní jednotky
+Podpisový záznam:
+22. 5. 2024</p>
+<p>Akciová společnost
+B 3169 vedená u Krajského soudu v Ostravě
+Výroba a montáž stínící techniky
+Ing. Bohumil: Blachut        
+
+
+
+ <h1>VÝKAZ ZISKU A ZTRÁT</h1>
+<p>Ke dni 31. 12. 2023
+(v celých trk. Kč)</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: center;">Označeni</th>
+<th style="text-align: center;">TEXT</th>
+<th style="text-align: center;">Čislo Fádku</th>
+<th style="text-align: center;">Skutečnost v účetním období běžném</th>
+<th style="text-align: center;">mínulém</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;">I.</td>
+<td style="text-align: center;">Tržby z prodeje výrobkủ a služeb</td>
+<td style="text-align: center;">01</td>
+<td style="text-align: center;">1433673</td>
+<td style="text-align: center;">1431782</td>
+</tr>
+<tr>
+<td style="text-align: center;">II.</td>
+<td style="text-align: center;">Tržby za prodej zboží</td>
+<td style="text-align: center;">02</td>
+<td style="text-align: center;">4244</td>
+<td style="text-align: center;">4725</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.</td>
+<td style="text-align: center;">Výkonová spotřeba</td>
+<td style="text-align: center;">03</td>
+<td style="text-align: center;">1095472</td>
+<td style="text-align: center;">1138131</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.1.</td>
+<td style="text-align: center;">Náklady vynaložené na prodané zboží</td>
+<td style="text-align: center;">04</td>
+<td style="text-align: center;">2571</td>
+<td style="text-align: center;">4391</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.2.</td>
+<td style="text-align: center;">Spotřeba materiálu a energie</td>
+<td style="text-align: center;">05</td>
+<td style="text-align: center;">872070</td>
+<td style="text-align: center;">913215</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.3.</td>
+<td style="text-align: center;">služby</td>
+<td style="text-align: center;">06</td>
+<td style="text-align: center;">220831</td>
+<td style="text-align: center;">220525</td>
+</tr>
+<tr>
+<td style="text-align: center;">B.</td>
+<td style="text-align: center;">Změna stavu zásob vlastní činnosti (+/-)</td>
+<td style="text-align: center;">07</td>
+<td style="text-align: center;">468</td>
+<td style="text-align: center;">$-8621$</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.</td>
+<td style="text-align: center;">Aktivace (-)</td>
+<td style="text-align: center;">08</td>
+<td style="text-align: center;">$-114160$</td>
+<td style="text-align: center;">$-144982$</td>
+</tr>
+<tr>
+<td style="text-align: center;">D.</td>
+<td style="text-align: center;">Osobní náklady</td>
+<td style="text-align: center;">09</td>
+<td style="text-align: center;">357703</td>
+<td style="text-align: center;">345744</td>
+</tr>
+<tr>
+<td style="text-align: center;">D.1.</td>
+<td style="text-align: center;">Mzdové náklady</td>
+<td style="text-align: center;">10</td>
+<td style="text-align: center;">257995</td>
+<td style="text-align: center;">247692</td>
+</tr>
+<tr>
+<td style="text-align: center;">D.2.</td>
+<td style="text-align: center;">Náklady na sociální zabezpečení, zdravotní pojíštění a ostatní náklady</td>
+<td style="text-align: center;">11</td>
+<td style="text-align: center;">99708</td>
+<td style="text-align: center;">98052</td>
+</tr>
+<tr>
+<td style="text-align: center;">D.2. 1.</td>
+<td style="text-align: center;">Náklady na sociální zabezpečení a zdravotní pojíštění</td>
+<td style="text-align: center;">12</td>
+<td style="text-align: center;">87051</td>
+<td style="text-align: center;">85369</td>
+</tr>
+<tr>
+<td style="text-align: center;">D.2. 2.</td>
+<td style="text-align: center;">Ostatní náklady</td>
+<td style="text-align: center;">13</td>
+<td style="text-align: center;">12657</td>
+<td style="text-align: center;">12683</td>
+</tr>
+<tr>
+<td style="text-align: center;">E.</td>
+<td style="text-align: center;">Úpravy hodnot v provozní oblasti</td>
+<td style="text-align: center;">14</td>
+<td style="text-align: center;">55348</td>
+<td style="text-align: center;">58456</td>
+</tr>
+<tr>
+<td style="text-align: center;">E.1.</td>
+<td style="text-align: center;">Úpravy hodnot dlouhodobého nehmotného a hmotného majctku</td>
+<td style="text-align: center;">15</td>
+<td style="text-align: center;">49579</td>
+<td style="text-align: center;">48611</td>
+</tr>
+<tr>
+<td style="text-align: center;">E.1. 1.</td>
+<td style="text-align: center;">Úpravy hodnot dlouhodobého nehmotného a hmotného majctku - trvalé</td>
+<td style="text-align: center;">16</td>
+<td style="text-align: center;">48714</td>
+<td style="text-align: center;">48611</td>
+</tr>
+<tr>
+<td style="text-align: center;">E.1. 2.</td>
+<td style="text-align: center;">Úpravy hodnot dlouhodobého nehmotného a hmotného majctku - dočasné</td>
+<td style="text-align: center;">17</td>
+<td style="text-align: center;">865</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">E.2.</td>
+<td style="text-align: center;">Úpravy hodnot zásob</td>
+<td style="text-align: center;">18</td>
+<td style="text-align: center;">$-4483$</td>
+<td style="text-align: center;">4898</td>
+</tr>
+<tr>
+<td style="text-align: center;">E.3.</td>
+<td style="text-align: center;">Úpravy hodnot pohledávek</td>
+<td style="text-align: center;">19</td>
+<td style="text-align: center;">10252</td>
+<td style="text-align: center;">4947</td>
+</tr>
+<tr>
+<td style="text-align: center;">III.</td>
+<td style="text-align: center;">Ostatní provozní výnosy</td>
+<td style="text-align: center;">20</td>
+<td style="text-align: center;">122509</td>
+<td style="text-align: center;">126646</td>
+</tr>
+<tr>
+<td style="text-align: center;">III.1.</td>
+<td style="text-align: center;">Tržby z prodaného dlouhodobého majctku</td>
+<td style="text-align: center;">21</td>
+<td style="text-align: center;">2209</td>
+<td style="text-align: center;">723</td>
+</tr>
+<tr>
+<td style="text-align: center;">III.2.</td>
+<td style="text-align: center;">Tržby z prodaného materiálu</td>
+<td style="text-align: center;">22</td>
+<td style="text-align: center;">108427</td>
+<td style="text-align: center;">113679</td>
+</tr>
+<tr>
+<td style="text-align: center;">III.3.</td>
+<td style="text-align: center;">Jiné provozní výnosy</td>
+<td style="text-align: center;">23</td>
+<td style="text-align: center;">11873</td>
+<td style="text-align: center;">12244</td>
+</tr>
+<tr>
+<td style="text-align: center;">F.</td>
+<td style="text-align: center;">Ostatní provozní náklady</td>
+<td style="text-align: center;">24</td>
+<td style="text-align: center;">82831</td>
+<td style="text-align: center;">91559</td>
+</tr>
+<tr>
+<td style="text-align: center;">F.1.</td>
+<td style="text-align: center;">Zôstativová cena prodaného dlouhodobého majctku</td>
+<td style="text-align: center;">25</td>
+<td style="text-align: center;">703</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">F.2.</td>
+<td style="text-align: center;">Prodaný materiál</td>
+<td style="text-align: center;">26</td>
+<td style="text-align: center;">70734</td>
+<td style="text-align: center;">73622</td>
+</tr>
+<tr>
+<td style="text-align: center;">F.3.</td>
+<td style="text-align: center;">Dané a poplatky</td>
+<td style="text-align: center;">27</td>
+<td style="text-align: center;">484</td>
+<td style="text-align: center;">348</td>
+</tr>
+<tr>
+<td style="text-align: center;">F.4.</td>
+<td style="text-align: center;">Rezenvy v provozní oblasti a komplexní náklady pifittich obdobi</td>
+<td style="text-align: center;">28</td>
+<td style="text-align: center;">$-1560$</td>
+<td style="text-align: center;">$-1101$</td>
+</tr>
+<tr>
+<td style="text-align: center;">F.5.</td>
+<td style="text-align: center;">Jiné provozní náklady</td>
+<td style="text-align: center;">29</td>
+<td style="text-align: center;">12470</td>
+<td style="text-align: center;">18690</td>
+</tr>
+<tr>
+<td style="text-align: center;">*</td>
+<td style="text-align: center;">Provozní výsledek hospodá́rení</td>
+<td style="text-align: center;">30</td>
+<td style="text-align: center;">82764</td>
+<td style="text-align: center;">82866</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th style="text-align: center;">Označeni</th>
+<th style="text-align: center;">TEXT</th>
+<th style="text-align: center;">Čislo Yádku</th>
+<th style="text-align: center;">Skutečnost v účetním období</th>
+<th style="text-align: center;"></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;">IV.</td>
+<td style="text-align: center;">Výnosy z dlouhodobého finančního majetku podily</td>
+<td style="text-align: center;">31</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">IV. 1.</td>
+<td style="text-align: center;">Výnosy z podliú - ovládaná nebo ovládajicí osoba</td>
+<td style="text-align: center;">32</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">IV.2.</td>
+<td style="text-align: center;">Ostatní výnosy z podlú</td>
+<td style="text-align: center;">33</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">G.</td>
+<td style="text-align: center;">Náklady vynaložené na prodané podily</td>
+<td style="text-align: center;">34</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">V.</td>
+<td style="text-align: center;">Výnosy z ostatního dlouhodobého finančního majetku</td>
+<td style="text-align: center;">35</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">V.1.</td>
+<td style="text-align: center;">Výnosy z ostatního dlouhodobého fin. majetku ovládaná nebo ovládajicí osoba</td>
+<td style="text-align: center;">36</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">V.2.</td>
+<td style="text-align: center;">Ostatní výnosy z ostatního dlouhodobého finančního majetku</td>
+<td style="tex        
+
+
+
+
+<h1>ROZVAHA</h1>
+<p>Ko dní 31. 12. 2023
+(v celých tis. KE)</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: center;">Označeni</th>
+<th style="text-align: center;">AKTIVA</th>
+<th style="text-align: center;">Číslo řádku</th>
+<th style="text-align: center;">Běžné účetní obdobi</th>
+<th style="text-align: center;"></th>
+<th style="text-align: center;"></th>
+<th style="text-align: center;">Minuté <br> úc. <br> obdobi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">Brutto <br> 1</td>
+<td style="text-align: center;">Korekce <br> 2</td>
+<td style="text-align: center;">Netto <br> 3</td>
+<td style="text-align: center;">Netto <br> 4</td>
+</tr>
+<tr>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">AKTIVA CELKEM</td>
+<td style="text-align: center;">001</td>
+<td style="text-align: center;">1125225</td>
+<td style="text-align: center;">463290</td>
+<td style="text-align: center;">661935</td>
+<td style="text-align: center;">715104</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.</td>
+<td style="text-align: center;">Pohledávky za upsaný základnĺ kapitál</td>
+<td style="text-align: center;">002</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">B.</td>
+<td style="text-align: center;">Szálá akóva</td>
+<td style="text-align: center;">003</td>
+<td style="text-align: center;">624634</td>
+<td style="text-align: center;">423162</td>
+<td style="text-align: center;">201472</td>
+<td style="text-align: center;">195162</td>
+</tr>
+<tr>
+<td style="text-align: center;">B1.</td>
+<td style="text-align: center;">Dlouhodobý nehmotný majetek</td>
+<td style="text-align: center;">004</td>
+<td style="text-align: center;">47380</td>
+<td style="text-align: center;">32447</td>
+<td style="text-align: center;">14933</td>
+<td style="text-align: center;">9409</td>
+</tr>
+<tr>
+<td style="text-align: center;">B11.</td>
+<td style="text-align: center;">Nehmotné výsledky vývoje</td>
+<td style="text-align: center;">005</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">B12.</td>
+<td style="text-align: center;">Ocenitelná práva</td>
+<td style="text-align: center;">006</td>
+<td style="text-align: center;">36745</td>
+<td style="text-align: center;">32447</td>
+<td style="text-align: center;">4298</td>
+<td style="text-align: center;">5695</td>
+</tr>
+<tr>
+<td style="text-align: center;">B12.1.</td>
+<td style="text-align: center;">Software</td>
+<td style="text-align: center;">007</td>
+<td style="text-align: center;">36745</td>
+<td style="text-align: center;">32447</td>
+<td style="text-align: center;">4298</td>
+<td style="text-align: center;">5695</td>
+</tr>
+<tr>
+<td style="text-align: center;">B12.2.</td>
+<td style="text-align: center;">Ostatní ocenitelná práva</td>
+<td style="text-align: center;">008</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">B13.</td>
+<td style="text-align: center;">Goodwill</td>
+<td style="text-align: center;">009</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">B14.</td>
+<td style="text-align: center;">Ostatní dlouhodobý nehmotný majetek</td>
+<td style="text-align: center;">010</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">B15.</td>
+<td style="text-align: center;">Poskytnuté zálohy na DNM a nedokončený DNM</td>
+<td style="text-align: center;">011</td>
+<td style="text-align: center;">10635</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">10635</td>
+<td style="text-align: center;">3714</td>
+</tr>
+<tr>
+<td style="text-align: center;">B15.1.</td>
+<td style="text-align: center;">Poskytnuté zálohy na dlouhodobý nehmotný majetek</td>
+<td style="text-align: center;">012</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">B15.2.</td>
+<td style="text-align: center;">Nedokončený dlouhodobý nehmotný majetek</td>
+<td style="text-align: center;">013</td>
+<td style="text-align: center;">10635</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">10635</td>
+<td style="text-align: center;">3714</td>
+</tr>
+<tr>
+<td style="text-align: center;">B.II.</td>
+<td style="text-align: center;">Dlouhodobý hmotný majetek</td>
+<td style="text-align: center;">014</td>
+<td style="text-align: center;">577254</td>
+<td style="text-align: center;">390715</td>
+<td style="text-align: center;">186539</td>
+<td style="text-align: center;">185753</td>
+</tr>
+<tr>
+<td style="text-align: center;">B.II.1.</td>
+<td style="text-align: center;">Pozemky a stavby</td>
+<td style="text-align: center;">015</td>
+<td style="text-align: center;">12819</td>
+<td style="text-align: center;">679</td>
+<td style="text-align: center;">12140</td>
+<td style="text-align: center;">12548</td>
+</tr>
+<tr>
+<td style="text-align: center;">B.II.1.1.</td>
+<td style="text-align: center;">Pozemky</td>
+<td style="text-align: center;">016</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">B.II.1.2.</td>
+<td style="text-align: center;">Stavby</td>
+<td style="text-align: center;">017</td>
+<td style="text-align: center;">12819</td>
+<td style="text-align: center;">679</td>
+<td style="text-align: center;">12140</td>
+<td style="text-align: center;">12548</td>
+</tr>
+<tr>
+<td style="text-align: center;">B.II.2.</td>
+<td style="text-align: center;">Hmotné movité věci a jejich soubory</td>
+<td style="text-align: center;">018</td>
+<td style="text-align: center;">510754</td>
+<td style="text-align: center;">386006</td>
+<td style="text-align: center;">124748</td>
+<td style="text-align: center;">135397</td>
+</tr>
+<tr>
+<td style="text-align: center;">B.II.3.</td>
+<td style="text-align: center;">Oceřovací rozdí k nabytému majetku</td>
+<td style="text-align: center;">019</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">B.II.4.</td>
+<td style="text-align: center;">Ostatní dlouhodobý hmotný majetek</td>
+<td style="text-align: center;">020</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">B.II.4.1.</td>
+<td style="text-align: center;">Pěstitelské celky trvalých porostů</td>
+<td style="text-align: center;">021</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">B.II.4.2.</td>
+<td style="text-align: center;">Dospětá zvillata a jejich skupiny</td>
+<td style="text-align: center;">022</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">B.II.4.3.</td>
+<td style="text-align: center;">Jiný dlouhodobý hmotný majetek</td>
+<td style="text-align: center;">023</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">B.II.5.</td>
+<td style="text-align: center;">Poskytnuté zálohy na DHM a nedokončený DHM</td>
+<td style="text-align: center;">024</td>
+<td style="text-align: center;">53681</td>
+<td style="text-align: center;">4030</td>
+<td style="text-align: center;">49651</td>
+<td style="text-align: center;">37808</td>
+</tr>
+<tr>
+<td style="text-align: center;">B.II.5.1.</td>
+<td style="text-align: center;">Poskytnuté zálohy na dlouhodobý hmotný majetek</td>
+<td style="text-align: center;">025</td>
+<td style="text-align: center;">21354</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">21354</td>
+<td style="text-align: center;">13445</td>
+</tr>
+<tr>
+<td style="text-align: center;">B.II.5.2.</td>
+<td style="text-align: center;">Nedokončený dlouhodobý hmotný majetek</td>
+<td style="text-align: center;">026</td>
+<td style="text-align: center;">32327</td>
+<td style="text-align: center;">4030</td>
+<td style="text-align: center;">28297</td>
+<td style="text-align: center;">24363</td>
+</tr>
+<tr>
+<td style="text-align: center;">B.III.</td>
+<td style="text-align: center;">Dlouhodobý finanční majetek</td>
+<td style="text-align: center;">027</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">B.III.1.</td>
+<td style="text-align: center;">Podily - ovládaná nebo ovládající osoba</td>
+<td style="text-align: center;">028</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">B.III.2.</td>
+<td style="text-align: center;">Zápáříky a úvěry - ovládaná nebo ovládající osoba</td>
+<td style="text-align: center;">029</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">B.III.3.</td>
+<td style="text-align: center;">Podily - podstatný vliv</td>
+<td style="text-align: center;">030</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+</tbody>
+</table>
+<p>[^0]
+[^0]:    Č̛̌̌ě̌ě̌o podis zákona o auslizenech
+    Auslizeníou epoletnost AĕC.AUDPt, s.r.o.
+    IC: 25899027, 8. opránání 387</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: center;">Označeni</th>
+<th style="text-align: center;">AKTIVA</th>
+<th style="text-align: center;">Čislo Fádku</th>
+<th style="text-align: center;">Běžné účetní obdobi</th>
+<th style="text-align: center;"></th>
+<th style="text-align: center;">Mínulé až. obdobi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">Brutto <br> 1</td>
+<td style="text-align: center;">Korekce <br> 2</td>
+<td style="text-align: center;">Netto <br> 3</td>
+</tr>
+<tr>
+<td style="text-align: center;">B.III.4.</td>
+<td style="text-align: center;">Zápůjčky a úvěry - podstatný vliv</td>
+<td style="text-align: center;">031</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">B.III.5.</td>
+<td style="text-align: center;">Ostatní dlouhodobé cenné papíry a podily</td>
+<td style="text-align: center;">032</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">B.III.6.</td>
+<td style="text-align: center;">Zápǔjčky a úvěry - ostatní</td>
+<td style="text-align: center;">033</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">B.III.7.</td>
+<td style="text-align: center;">Ostatní dlouhodobý finanční majetek</td>
+<td style="text-align: center;">034</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">B.III.7. 1.</td>
+<td style="text-align: center;">Jiný dlouhodobý finanční majetek</td>
+<td style="text-align: center;">035</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">B.III.7. 2.</td>
+<td style="text-align: center;">Poskytnuté zálohy na dlouhodobý finanční majetek</td>
+<td style="text-align: center;">036</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.</td>
+<td style="text-align: center;">Oběžná aktiva</td>
+<td style="text-align: center;">037</td>
+<td style="text-align: center;">491331</td>
+<td style="text-align: center;">40128</td>
+<td style="text-align: center;">451203</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.I.</td>
+<td style="text-align: center;">Zásoby</td>
+<td style="text-align: center;">038</td>
+<td style="text-align: center;">292227</td>
+<td style="text-align: center;">16862</td>
+<td style="text-align: center;">275365</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.I.I.</td>
+<td style="text-align: center;">Matcriál</td>
+<td style="text-align: center;">039</td>
+<td style="text-align: center;">261196</td>
+<td style="text-align: center;">16862</td>
+<td style="text-align: center;">244334</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.I.2.</td>
+<td style="text-align: center;">Nedokončená výroba a polotovary</td>
+<td style="text-align: center;">040</td>
+<td style="text-align: center;">25909</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">25909</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.I.3.</td>
+<td style="text-align: center;">Výrobky a zboží</td>
+<td style="text-align: center;">041</td>
+<td style="text-align: center;">5122</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">5122</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.I.3. 1.</td>
+<td style="text-align: center;">Výrobky</td>
+<td style="text-align: center;">042</td>
+<td style="text-align: center;">5073</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">5073</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.I.3. 2.</td>
+<td style="text-align: center;">Zboží</td>
+<td style="text-align: center;">043</td>
+<td style="text-align: center;">49</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">49</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.I.4.</td>
+<td style="text-align: center;">Mladá a ostatní zvifata a jejich skupiny</td>
+<td style="text-align: center;">044</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.I.5.</td>
+<td style="text-align: center;">Poskytnuté zálohy na zásoby</td>
+<td style="text-align: center;">045</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.II.</td>
+<td style="text-align: center;">Pohledávky</td>
+<td style="text-align: center;">046</td>
+<td style="text-align: center;">185199</td>
+<td style="text-align: center;">23266</td>
+<td style="text-align: center;">161933</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.II.1.</td>
+<td style="text-align: center;">Dlouhodobé pohledávky</td>
+<td style="text-align: center;">047</td>
+<td style="text-align: center;">13123</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">13123</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.II.1. 1.</td>
+<td style="text-align: center;">Pohledávky z obchodnich vztahů</td>
+<td style="text-align: center;">048</td>
+<td style="text-align: center;">13123</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">13123</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.II.1. 2.</td>
+<td style="text-align: center;">Pohledávky - ovládaná nebo ovládající osoba</td>
+<td style="text-align: center;">049</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.II.1. 3.</td>
+<td style="text-align: center;">Pohledávky - podstatný vliv</td>
+<td style="text-align: center;">050</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.II.1. 4.</td>
+<td style="text-align: center;">Odložená daňová pohledávka</td>
+<td style="text-align: center;">051</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.II.1. 5.</td>
+<td style="text-align: center;">Pohledávky - ostatní</td>
+<td style="text-align: center;">052</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.II.1. 5. 1.</td>
+<td style="text-align: center;">Pohledávky za společniky</td>
+<td style="text-align: center;">053</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.II.1. 5. 2.</td>
+<td style="text-align: center;">Dlouhodobé poskytnuté zálohy</td>
+<td style="text-align: center;">054</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.II.1. 5. 3.</td>
+<td style="text-align: center;">Dohadné účty aktivní</td>
+<td style="text-align: center;">055</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.II.1. 5. 4.</td>
+<td style="text-align: center;">Jiné pohledávky</td>
+<td style="text-align: center;">056</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.8.2.</td>
+<td style="text-align: center;">Králkodobé pohledávky</td>
+<td style="text-align: center;">057</td>
+<td style="text-align: center;">172076</td>
+<td style="text-align: center;">23266</td>
+<td style="text-align: center;">148810</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.8.2. 1.</td>
+<td style="text-align: center;">Pohledávky z obchodnich vztahů</td>
+<td style="text-align: center;">058</td>
+<td style="text-align: center;">163830</td>
+<td style="text-align: center;">23266</td>
+<td style="text-align: center;">140564</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.8.2. 2.</td>
+<td style="text-align: center;">Pohledávky - ovládaná nebo ovládající osoba</td>
+<td style="text-align: center;">059</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.8.2. 3.</td>
+<td style="text-align: center;">Pohledávky - podstatný vliv</td>
+<td style="text-align: center;">060</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.8.2. 4.</td>
+<td style="text-align: center;">Pohledávky - ostatní</td>
+<td style="text-align: center;">061</td>
+<td style="text-align: center;">8246</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">8246</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.8.2. 4. 1.</td>
+<td style="text-align: center;">Pohledávky za společniky</td>
+<td style="text-align: center;">062</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.8.2. 4. 2.</td>
+<td style="text-align: center;">Sociální zabezpečení a zdravotní pojistění</td>
+<td style="text-align: center;">063</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.II.2. 4. 3.</td>
+<td style="text-align: center;">Stát - daňové pohledávky</td>
+<td style="text-align: center;">064</td>
+<td style="text-align: center;">989</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">989</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.II.2. 4. 4.</td>
+<td style="text-align: center;">Králkodobé poskytnuté zálohy</td>
+<td style="text-align: center;">065</td>
+<td style="text-align: center;">1615</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">1615</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.II.2. 4. 5.</td>
+<td style="text-align: center;">Dohadné účty aktivní</td>
+<td style="text-align: center;">066</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.II.2. 4. 6.</td>
+<td style="text-align: center;">Jiné pohledávky</td>
+<td style="text-align: center;">067</td>
+<td style="text-align: center;">5642</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">5642</td>
+</tr>
+</tbody>
+</table>
+<p>C. 8.4 . podte zákone a euclitornich euclitorskou společnost ASC, ALIDIT, a.r.o. v. 050000007, a. opravnání 387</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: center;">Označeni</th>
+<th style="text-align: center;">AKTNA</th>
+<th style="text-align: center;">Čisto řádku</th>
+<th style="text-align: center;">Bě̌ně účetní obdobi</th>
+<th style="text-align: center;"></th>
+<th style="text-align: center;"></th>
+<th style="text-align: center;">Mínulé úč. obdobi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">Brutto</td>
+<td style="text-align: center;">Korekce</td>
+<td style="text-align: center;">Netto</td>
+<td style="text-align: center;">Netto</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.III.</td>
+<td style="text-align: center;">Krátkodobý finanční majetek</td>
+<td style="text-align: center;">068</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.III.1.</td>
+<td style="text-align: center;">Podily - ovládaná nebo ovládající osoba</td>
+<td style="text-align: center;">069</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.III.2.</td>
+<td style="text-align: center;">Ostatní krátkodobý finanční majetek</td>
+<td style="text-align: center;">070</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.N.</td>
+<td style="text-align: center;">Penĕzní prostředky</td>
+<td style="text-align: center;">071</td>
+<td style="text-align: center;">13905</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">13905</td>
+<td style="text-align: center;">14911</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.N.1.</td>
+<td style="text-align: center;">Penĕzní prostředky v pokladně</td>
+<td style="text-align: center;">072</td>
+<td style="text-align: center;">10690</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">10690</td>
+<td style="text-align: center;">10831</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.N.2.</td>
+<td style="text-align: center;">Penĕzní prostředky na úctech</td>
+<td style="text-align: center;">073</td>
+<td style="text-align: center;">3215</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">3215</td>
+<td style="text-align: center;">4080</td>
+</tr>
+<tr>
+<td style="text-align: center;">D.</td>
+<td style="text-align: center;">Časové rozšírení aktiv</td>
+<td style="text-align: center;">074</td>
+<td style="text-align: center;">9260</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">9260</td>
+<td style="text-align: center;">6748</td>
+</tr>
+<tr>
+<td style="text-align: center;">D.1.</td>
+<td style="text-align: center;">Náklady prístich obdobi</td>
+<td style="text-align: center;">075</td>
+<td style="text-align: center;">7277</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">7277</td>
+<td style="text-align: center;">6097</td>
+</tr>
+<tr>
+<td style="text-align: center;">D.2.</td>
+<td style="text-align: center;">Komplexní náklady prístich obdobi</td>
+<td style="text-align: center;">076</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">D.3.</td>
+<td style="text-align: center;">Přijmy prístich obdobi</td>
+<td style="text-align: center;">077</td>
+<td style="text-align: center;">1983</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">1983</td>
+<td style="text-align: center;">651</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th style="text-align: center;">Označení</th>
+<th style="text-align: center;">PASIVA</th>
+<th style="text-align: center;">Čislo řádku</th>
+<th style="text-align: center;">Běžné účetní období</th>
+<th style="text-align: center;">Minulé účetni období</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">PASIVA CELKEM</td>
+<td style="text-align: center;">078</td>
+<td style="text-align: center;">661935</td>
+<td style="text-align: center;">715104</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.</td>
+<td style="text-align: center;">Vlastní kapitál</td>
+<td style="text-align: center;">079</td>
+<td style="text-align: center;">326140</td>
+<td style="text-align: center;">291509</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.I</td>
+<td style="text-align: center;">Základní kapitál</td>
+<td style="text-align: center;">080</td>
+<td style="text-align: center;">3000</td>
+<td style="text-align: center;">3000</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.I.1.</td>
+<td style="text-align: center;">Základní kapitál</td>
+<td style="text-align: center;">081</td>
+<td style="text-align: center;">3000</td>
+<td style="text-align: center;">3000</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.I.2.</td>
+<td style="text-align: center;">Vlastní podily (-)</td>
+<td style="text-align: center;">082</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.I.3.</td>
+<td style="text-align: center;">Změny základního kapitálu</td>
+<td style="text-align: center;">083</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.II.</td>
+<td style="text-align: center;">Ábo a kapitálové fondy</td>
+<td style="text-align: center;">084</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.II.1.</td>
+<td style="text-align: center;">Ábo</td>
+<td style="text-align: center;">085</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.II.2.</td>
+<td style="text-align: center;">Kapitálové fondy</td>
+<td style="text-align: center;">086</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.II.2. 1.</td>
+<td style="text-align: center;">Ostatní kapitálové fondy</td>
+<td style="text-align: center;">087</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.II.2. 2.</td>
+<td style="text-align: center;">Oceňovací rozdily z precenění majetku a závazíků</td>
+<td style="text-align: center;">088</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.II.2. 3.</td>
+<td style="text-align: center;">Oceňovací rozdily z precenění při přeměnách obch. korporací</td>
+<td style="text-align: center;">089</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.II.2. 4.</td>
+<td style="text-align: center;">Rozdily z preměn obchodnich korporací</td>
+<td style="text-align: center;">090</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.II.2. 5.</td>
+<td style="text-align: center;">Rozdily z ocenění při přeměnách obchodnich korporací</td>
+<td style="text-align: center;">091</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.III.</td>
+<td style="text-align: center;">Fondy ze zisku</td>
+<td style="text-align: center;">092</td>
+<td style="text-align: center;">600</td>
+<td style="text-align: center;">600</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.III.1.</td>
+<td style="text-align: center;">Ostatní rezervní fondy</td>
+<td style="text-align: center;">093</td>
+<td style="text-align: center;">600</td>
+<td style="text-align: center;">600</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.III.2.</td>
+<td style="text-align: center;">Statutární a ostatní fondy</td>
+<td style="text-align: center;">094</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.IV.</td>
+<td style="text-align: center;">Výsledek hospodáření minulých let</td>
+<td style="text-align: center;">095</td>
+<td style="text-align: center;">267909</td>
+<td style="text-align: center;">226910</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.IV.1.</td>
+<td style="text-align: center;">Nerozdělený zisk nebo neuhrazená ztráca minulých let</td>
+<td style="text-align: center;">096</td>
+<td style="text-align: center;">267909</td>
+<td style="text-align: center;">226910</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.IV.2.</td>
+<td style="text-align: center;">Jiný výsledek hospodáření minulých let</td>
+<td style="text-align: center;">097</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.V.</td>
+<td style="text-align: center;">Výsledek hospodáření běžného účetního období</td>
+<td style="text-align: center;">098</td>
+<td style="text-align: center;">54631</td>
+<td style="text-align: center;">60999</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.VI.</td>
+<td style="text-align: center;">Rozhodnutc o zálohové výplatě podílu na zisku</td>
+<td style="text-align: center;">099</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">B + C</td>
+<td style="text-align: center;">CIZÍ ZDRCIE</td>
+<td style="text-align: center;">100</td>
+<td style="text-align: center;">333912</td>
+<td style="text-align: center;">419805</td>
+</tr>
+<tr>
+<td style="text-align: center;">B.</td>
+<td style="text-align: center;">Rezervy</td>
+<td style="text-align: center;">101</td>
+<td style="text-align: center;">10622</td>
+<td style="text-align: center;">12182</td>
+</tr>
+<tr>
+<td style="text-align: center;">B.I.</td>
+<td style="text-align: center;">Rezerva na dôchody a podobné závazky</td>
+<td style="text-align: center;">102</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">B.2.</td>
+<td style="text-align: center;">Rezerva na daň z přijmů</td>
+<td style="text-align: center;">103</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">B.3.</td>
+<td style="text-align: center;">Rezervy podle zvláštních právnich předpisů</td>
+<td style="text-align: center;">104</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">B.4.</td>
+<td style="text-align: center;">Ostatní rezervy</td>
+<td style="text-align: center;">105</td>
+<td style="text-align: center;">10622</td>
+<td style="text-align: center;">12182</td>
+</tr>
+<tr>
+<td style="text-align: center;">C</td>
+<td style="text-align: center;">Závazky</td>
+<td style="text-align: center;">106</td>
+<td style="text-align: center;">323291</td>
+<td style="text-align: center;">407623</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.I.</td>
+<td style="text-align: center;">Dlouhodobé závazky</td>
+<td style="text-align: center;">107</td>
+<td style="text-align: center;">63666</td>
+<td style="text-align: center;">125176</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.I.1.</td>
+<td style="text-align: center;">Vydané dluhopisy</td>
+<td style="text-align: center;">108</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.I.1. 1.</td>
+<td style="text-align: center;">Vyměnitelné dluhopisy</td>
+<td style="text-align: center;">109</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.I.1. 2.</td>
+<td style="text-align: center;">Ostatní dluhopisy</td>
+<td style="text-align: center;">110</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.I.2.</td>
+<td style="text-align: center;">Závazky k úvěrovým institucím</td>
+<td style="text-align: center;">111</td>
+<td style="text-align: center;">59140</td>
+<td style="text-align: center;">115610</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.I.3.</td>
+<td style="text-align: center;">Dlouhodobé přijaté zálohy</td>
+<td style="text-align: center;">112</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.I.4.</td>
+<td style="text-align: center;">Závazky z obchodnich vztahů</td>
+<td style="text-align: center;">113</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">3921</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.I.5.</td>
+<td style="text-align: center;">Dlouhodobé směrky k úhradě</td>
+<td style="text-align: center;">114</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.I.6.</td>
+<td style="text-align: center;">Závazky - ovládaná nebo ovládající osoba</td>
+<td style="text-align: center;">115</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th style="text-align: center;">Označeni</th>
+<th style="text-align: center;">PASIVA</th>
+<th style="text-align: center;">Čislo řádku</th>
+<th style="text-align: center;">Bě̌né účetni obdobi</th>
+<th style="text-align: center;">Minulém účetni obdobi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;">C.1.7.</td>
+<td style="text-align: center;">Závazky - podstatný viliv</td>
+<td style="text-align: center;">116</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.1.8.</td>
+<td style="text-align: center;">Odložený daňový závazek</td>
+<td style="text-align: center;">117</td>
+<td style="text-align: center;">4526</td>
+<td style="text-align: center;">5645</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.1.9.</td>
+<td style="text-align: center;">Závazky - ostatni</td>
+<td style="text-align: center;">118</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.1.9. 1.</td>
+<td style="text-align: center;">Závazky ke společníkům</td>
+<td style="text-align: center;">119</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.1.9. 2.</td>
+<td style="text-align: center;">Dohadné účty pasivní</td>
+<td style="text-align: center;">120</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.1.9. 3.</td>
+<td style="text-align: center;">Jiné závazky</td>
+<td style="text-align: center;">121</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.II.</td>
+<td style="text-align: center;">Králkodobé závazky</td>
+<td style="text-align: center;">122</td>
+<td style="text-align: center;">259625</td>
+<td style="text-align: center;">282447</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.II.1.</td>
+<td style="text-align: center;">Vydané dluhopisy</td>
+<td style="text-align: center;">123</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.II.1. 1.</td>
+<td style="text-align: center;">Vyměněciné dluhopisy</td>
+<td style="text-align: center;">124</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.II.1. 2.</td>
+<td style="text-align: center;">Ostatní dluhopisy</td>
+<td style="text-align: center;">125</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.II.2.</td>
+<td style="text-align: center;">Závazky k úvěrovým institucím</td>
+<td style="text-align: center;">126</td>
+<td style="text-align: center;">91720</td>
+<td style="text-align: center;">104972</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.II.3.</td>
+<td style="text-align: center;">Králkodobé přijaté zálohy</td>
+<td style="text-align: center;">127</td>
+<td style="text-align: center;">15066</td>
+<td style="text-align: center;">22871</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.II.4.</td>
+<td style="text-align: center;">Závazky z obchodnich vztahů</td>
+<td style="text-align: center;">128</td>
+<td style="text-align: center;">86847</td>
+<td style="text-align: center;">64126</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.II.5.</td>
+<td style="text-align: center;">Králkodobé směrky k úhradě</td>
+<td style="text-align: center;">129</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.II.6.</td>
+<td style="text-align: center;">Závazky - ovládaná nebo ovládající osoba</td>
+<td style="text-align: center;">130</td>
+<td style="text-align: center;">21137</td>
+<td style="text-align: center;">52752</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.II.7.</td>
+<td style="text-align: center;">Závazky - podstatný viliv</td>
+<td style="text-align: center;">131</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.II.8.</td>
+<td style="text-align: center;">Závazky ostatni</td>
+<td style="text-align: center;">132</td>
+<td style="text-align: center;">44855</td>
+<td style="text-align: center;">37726</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.II.8. 1.</td>
+<td style="text-align: center;">Závazky ke společnikům</td>
+<td style="text-align: center;">133</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.II.8. 2.</td>
+<td style="text-align: center;">Králkodobé finanční výpomoci</td>
+<td style="text-align: center;">134</td>
+<td style="text-align: center;">1106</td>
+<td style="text-align: center;">1084</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.II.8. 3.</td>
+<td style="text-align: center;">Závazky k zaměstnancům</td>
+<td style="text-align: center;">135</td>
+<td style="text-align: center;">17819</td>
+<td style="text-align: center;">16880</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.II.8. 4.</td>
+<td style="text-align: center;">Závazky ze sociálního zabezpečení a zdravotního pojistění</td>
+<td style="text-align: center;">136</td>
+<td style="text-align: center;">9693</td>
+<td style="text-align: center;">9203</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.II.8. 5.</td>
+<td style="text-align: center;">Stál - daňové závazky a dotace</td>
+<td style="text-align: center;">137</td>
+<td style="text-align: center;">8473</td>
+<td style="text-align: center;">3906</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.II.8. 6.</td>
+<td style="text-align: center;">Dohadné účty pasivní</td>
+<td style="text-align: center;">138</td>
+<td style="text-align: center;">7407</td>
+<td style="text-align: center;">6251</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.II.8. 7.</td>
+<td style="text-align: center;">Jiné závazky</td>
+<td style="text-align: center;">139</td>
+<td style="text-align: center;">357</td>
+<td style="text-align: center;">402</td>
+</tr>
+<tr>
+<td style="text-align: center;">D.</td>
+<td style="text-align: center;">Časové rozlišení pasiv</td>
+<td style="text-align: center;">140</td>
+<td style="text-align: center;">1882</td>
+<td style="text-align: center;">3790</td>
+</tr>
+<tr>
+<td style="text-align: center;">D.1.</td>
+<td style="text-align: center;">Výdaje prístich obdobi</td>
+<td style="text-align: center;">141</td>
+<td style="text-align: center;">641</td>
+<td style="text-align: center;">3588</td>
+</tr>
+<tr>
+<td style="text-align: center;">D. 2.</td>
+<td style="text-align: center;">Výnosy prístich obdobi</td>
+<td style="text-align: center;">142</td>
+<td style="text-align: center;">1241</td>
+<td style="text-align: center;">202</td>
+</tr>
+</tbody>
+</table>
+<p>Sestaveno dne:
+Právní forma účetní jednotky:
+Spisová značka:
+Předmět podnikání účetní jednotky:
+Podpisový záznam:</p>
+<ol>
+<li>
+<ol>
+<li>2024 akciová společnost B3169 vedená u Krajského soudu v Ostravě výroba a montáž stínić techniky Ing. Bohumír Blachu:
+<img alt="img-8.jpeg" src="img-8.jpeg" /></li>
+</ol>
+</li>
+</ol>
+<h1>VÝKAZ ZISKU A ZTRÁT</h1>
+<p>Ke dni 31. 12. 2023
+(v celých trk. Kč)</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: center;">Označeni</th>
+<th style="text-align: center;">TEXT</th>
+<th style="text-align: center;">Čislo Fádku</th>
+<th style="text-align: center;">Skutečnost v účetním období běžném</th>
+<th style="text-align: center;">mínulém</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;">I.</td>
+<td style="text-align: center;">Tržby z prodeje výrobkủ a služeb</td>
+<td style="text-align: center;">01</td>
+<td style="text-align: center;">1433673</td>
+<td style="text-align: center;">1431782</td>
+</tr>
+<tr>
+<td style="text-align: center;">II.</td>
+<td style="text-align: center;">Tržby za prodej zboží</td>
+<td style="text-align: center;">02</td>
+<td style="text-align: center;">4244</td>
+<td style="text-align: center;">4725</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.</td>
+<td style="text-align: center;">Výkonová spotřeba</td>
+<td style="text-align: center;">03</td>
+<td style="text-align: center;">1095472</td>
+<td style="text-align: center;">1138131</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.1.</td>
+<td style="text-align: center;">Náklady vynaložené na prodané zboží</td>
+<td style="text-align: center;">04</td>
+<td style="text-align: center;">2571</td>
+<td style="text-align: center;">4391</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.2.</td>
+<td style="text-align: center;">Spotřeba materiálu a energie</td>
+<td style="text-align: center;">05</td>
+<td style="text-align: center;">872070</td>
+<td style="text-align: center;">913215</td>
+</tr>
+<tr>
+<td style="text-align: center;">A.3.</td>
+<td style="text-align: center;">služby</td>
+<td style="text-align: center;">06</td>
+<td style="text-align: center;">220831</td>
+<td style="text-align: center;">220525</td>
+</tr>
+<tr>
+<td style="text-align: center;">B.</td>
+<td style="text-align: center;">Změna stavu zásob vlastní činnosti (+/-)</td>
+<td style="text-align: center;">07</td>
+<td style="text-align: center;">468</td>
+<td style="text-align: center;">$-8621$</td>
+</tr>
+<tr>
+<td style="text-align: center;">C.</td>
+<td style="text-align: center;">Aktivace (-)</td>
+<td style="text-align: center;">08</td>
+<td style="text-align: center;">$-114160$</td>
+<td style="text-align: center;">$-144982$</td>
+</tr>
+<tr>
+<td style="text-align: center;">D.</td>
+<td style="text-align: center;">Osobní náklady</td>
+<td style="text-align: center;">09</td>
+<td style="text-align: center;">357703</td>
+<td style="text-align: center;">345744</td>
+</tr>
+<tr>
+<td style="text-align: center;">D.1.</td>
+<td style="text-align: center;">Mzdové náklady</td>
+<td style="text-align: center;">10</td>
+<td style="text-align: center;">257995</td>
+<td style="text-align: center;">247692</td>
+</tr>
+<tr>
+<td style="text-align: center;">D.2.</td>
+<td style="text-align: center;">Náklady na sociální zabezpečení, zdravotní pojíštění a ostatní náklady</td>
+<td style="text-align: center;">11</td>
+<td style="text-align: center;">99708</td>
+<td style="text-align: center;">98052</td>
+</tr>
+<tr>
+<td style="text-align: center;">D.2. 1.</td>
+<td style="text-align: center;">Náklady na sociální zabezpečení a zdravotní pojíštění</td>
+<td style="text-align: center;">12</td>
+<td style="text-align: center;">87051</td>
+<td style="text-align: center;">85369</td>
+</tr>
+<tr>
+<td style="text-align: center;">D.2. 2.</td>
+<td style="text-align: center;">Ostatní náklady</td>
+<td style="text-align: center;">13</td>
+<td style="text-align: center;">12657</td>
+<td style="text-align: center;">12683</td>
+</tr>
+<tr>
+<td style="text-align: center;">E.</td>
+<td style="text-align: center;">Úpravy hodnot v provozní oblasti</td>
+<td style="text-align: center;">14</td>
+<td style="text-align: center;">55348</td>
+<td style="text-align: center;">58456</td>
+</tr>
+<tr>
+<td style="text-align: center;">E.1.</td>
+<td style="text-align: center;">Úpravy hodnot dlouhodobého nehmotného a hmotného majctku</td>
+<td style="text-align: center;">15</td>
+<td style="text-align: center;">49579</td>
+<td style="text-align: center;">48611</td>
+</tr>
+<tr>
+<td style="text-align: center;">E.1. 1.</td>
+<td style="text-align: center;">Úpravy hodnot dlouhodobého nehmotného a hmotného majctku - trvalé</td>
+<td style="text-align: center;">16</td>
+<td style="text-align: center;">48714</td>
+<td style="text-align: center;">48611</td>
+</tr>
+<tr>
+<td style="text-align: center;">E.1. 2.</td>
+<td style="text-align: center;">Úpravy hodnot dlouhodobého nehmotného a hmotného majctku - dočasné</td>
+<td style="text-align: center;">17</td>
+<td style="text-align: center;">865</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">E.2.</td>
+<td style="text-align: center;">Úpravy hodnot zásob</td>
+<td style="text-align: center;">18</td>
+<td style="text-align: center;">$-4483$</td>
+<td style="text-align: center;">4898</td>
+</tr>
+<tr>
+<td style="text-align: center;">E.3.</td>
+<td style="text-align: center;">Úpravy hodnot pohledávek</td>
+<td style="text-align: center;">19</td>
+<td style="text-align: center;">10252</td>
+<td style="text-align: center;">4947</td>
+</tr>
+<tr>
+<td style="text-align: center;">III.</td>
+<td style="text-align: center;">Ostatní provozní výnosy</td>
+<td style="text-align: center;">20</td>
+<td style="text-align: center;">122509</td>
+<td style="text-align: center;">126646</td>
+</tr>
+<tr>
+<td style="text-align: center;">III.1.</td>
+<td style="text-align: center;">Tržby z prodaného dlouhodobého majctku</td>
+<td style="text-align: center;">21</td>
+<td style="text-align: center;">2209</td>
+<td style="text-align: center;">723</td>
+</tr>
+<tr>
+<td style="text-align: center;">III.2.</td>
+<td style="text-align: center;">Tržby z prodaného materiálu</td>
+<td style="text-align: center;">22</td>
+<td style="text-align: center;">108427</td>
+<td style="text-align: center;">113679</td>
+</tr>
+<tr>
+<td style="text-align: center;">III.3.</td>
+<td style="text-align: center;">Jiné provozní výnosy</td>
+<td style="text-align: center;">23</td>
+<td style="text-align: center;">11873</td>
+<td style="text-align: center;">12244</td>
+</tr>
+<tr>
+<td style="text-align: center;">F.</td>
+<td style="text-align: center;">Ostatní provozní náklady</td>
+<td style="text-align: center;">24</td>
+<td style="text-align: center;">82831</td>
+<td style="text-align: center;">91559</td>
+</tr>
+<tr>
+<td style="text-align: center;">F.1.</td>
+<td style="text-align: center;">Zôstativová cena prodaného dlouhodobého majctku</td>
+<td style="text-align: center;">25</td>
+<td style="text-align: center;">703</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">F.2.</td>
+<td style="text-align: center;">Prodaný materiál</td>
+<td style="text-align: center;">26</td>
+<td style="text-align: center;">70734</td>
+<td style="text-align: center;">73622</td>
+</tr>
+<tr>
+<td style="text-align: center;">F.3.</td>
+<td style="text-align: center;">Dané a poplatky</td>
+<td style="text-align: center;">27</td>
+<td style="text-align: center;">484</td>
+<td style="text-align: center;">348</td>
+</tr>
+<tr>
+<td style="text-align: center;">F.4.</td>
+<td style="text-align: center;">Rezenvy v provozní oblasti a komplexní náklady pifittich obdobi</td>
+<td style="text-align: center;">28</td>
+<td style="text-align: center;">$-1560$</td>
+<td style="text-align: center;">$-1101$</td>
+</tr>
+<tr>
+<td style="text-align: center;">F.5.</td>
+<td style="text-align: center;">Jiné provozní náklady</td>
+<td style="text-align: center;">29</td>
+<td style="text-align: center;">12470</td>
+<td style="text-align: center;">18690</td>
+</tr>
+<tr>
+<td style="text-align: center;">*</td>
+<td style="text-align: center;">Provozní výsledek hospodá́rení</td>
+<td style="text-align: center;">30</td>
+<td style="text-align: center;">82764</td>
+<td style="text-align: center;">82866</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th style="text-align: center;">Označeni</th>
+<th style="text-align: center;">TEXT</th>
+<th style="text-align: center;">Čislo Yádku</th>
+<th style="text-align: center;">Skutečnost v účetním období</th>
+<th style="text-align: center;"></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: center;">IV.</td>
+<td style="text-align: center;">Výnosy z dlouhodobého finančního majetku podily</td>
+<td style="text-align: center;">31</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">IV. 1.</td>
+<td style="text-align: center;">Výnosy z podliú - ovládaná nebo ovládajicí osoba</td>
+<td style="text-align: center;">32</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">IV.2.</td>
+<td style="text-align: center;">Ostatní výnosy z podlú</td>
+<td style="text-align: center;">33</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">G.</td>
+<td style="text-align: center;">Náklady vynaložené na prodané podily</td>
+<td style="text-align: center;">34</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">V.</td>
+<td style="text-align: center;">Výnosy z ostatního dlouhodobého finančního majetku</td>
+<td style="text-align: center;">35</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">V.1.</td>
+<td style="text-align: center;">Výnosy z ostatního dlouhodobého fin. majetku ovládaná nebo ovládajicí osoba</td>
+<td style="text-align: center;">36</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">V.2.</td>
+<td style="text-align: center;">Ostatní výnosy z ostatního dlouhodobého finančního majetku</td>
+<td style="text-align: center;">37</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">H.</td>
+<td style="text-align: center;">Náklady související s ostatním dlouhodobým finančním majetkem</td>
+<td style="text-align: center;">38</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">VI.</td>
+<td style="text-align: center;">Výnosové úroky a podobné výnosy</td>
+<td style="text-align: center;">39</td>
+<td style="text-align: center;">134</td>
+<td style="text-align: center;">983</td>
+</tr>
+<tr>
+<td style="text-align: center;">VI.1.</td>
+<td style="text-align: center;">Výnosové úroky a podobné výnosy - ovládaná nebo ovládajicí osoba</td>
+<td style="text-align: center;">40</td>
+<td style="text-align: center;">134</td>
+<td style="text-align: center;">980</td>
+</tr>
+<tr>
+<td style="text-align: center;">VI.2.</td>
+<td style="text-align: center;">Ostatní výnosové úroky a podobné výnosy</td>
+<td style="text-align: center;">41</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">3</td>
+</tr>
+<tr>
+<td style="text-align: center;">I.</td>
+<td style="text-align: center;">Úpravy hodnot a rezervy ve finanční oblasti</td>
+<td style="text-align: center;">42</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">J.</td>
+<td style="text-align: center;">Nákladové úroky a podobné náklady</td>
+<td style="text-align: center;">43</td>
+<td style="text-align: center;">8991</td>
+<td style="text-align: center;">9128</td>
+</tr>
+<tr>
+<td style="text-align: center;">J.1.</td>
+<td style="text-align: center;">Nákladové úroky a podobné náklady - ovládaná nebo ovládajicí osoba</td>
+<td style="text-align: center;">44</td>
+<td style="text-align: center;">540</td>
+<td style="text-align: center;">1178</td>
+</tr>
+<tr>
+<td style="text-align: center;">J.2.</td>
+<td style="text-align: center;">Ostatní nákladové úroky a podobné náklady</td>
+<td style="text-align: center;">45</td>
+<td style="text-align: center;">8451</td>
+<td style="text-align: center;">7950</td>
+</tr>
+<tr>
+<td style="text-align: center;">VII.</td>
+<td style="text-align: center;">Ostatní finanční výnosy</td>
+<td style="text-align: center;">46</td>
+<td style="text-align: center;">5773</td>
+<td style="text-align: center;">13716</td>
+</tr>
+<tr>
+<td style="text-align: center;">K.</td>
+<td style="text-align: center;">Ostatní finanční náklady</td>
+<td style="text-align: center;">47</td>
+<td style="text-align: center;">11791</td>
+<td style="text-align: center;">9675</td>
+</tr>
+<tr>
+<td style="text-align: center;">*</td>
+<td style="text-align: center;">Finanční výsledek hospodá̌enií</td>
+<td style="text-align: center;">48</td>
+<td style="text-align: center;">$-14875$</td>
+<td style="text-align: center;">$-4104$</td>
+</tr>
+<tr>
+<td style="text-align: center;">**</td>
+<td style="text-align: center;">Výsledek hospodá̌ení před zdaněním</td>
+<td style="text-align: center;">49</td>
+<td style="text-align: center;">67889</td>
+<td style="text-align: center;">78762</td>
+</tr>
+<tr>
+<td style="text-align: center;">L.</td>
+<td style="text-align: center;">Daň z prtímů</td>
+<td style="text-align: center;">50</td>
+<td style="text-align: center;">13258</td>
+<td style="text-align: center;">17763</td>
+</tr>
+<tr>
+<td style="text-align: center;">L. 1.</td>
+<td style="text-align: center;">Daň z prtímů splatná</td>
+<td style="text-align: center;">51</td>
+<td style="text-align: center;">14377</td>
+<td style="text-align: center;">14736</td>
+</tr>
+<tr>
+<td style="text-align: center;">L.2.</td>
+<td style="text-align: center;">Daň z prtímů odložená</td>
+<td style="text-align: center;">52</td>
+<td style="text-align: center;">$-1119$</td>
+<td style="text-align: center;">3027</td>
+</tr>
+<tr>
+<td style="text-align: center;">**</td>
+<td style="text-align: center;">Výsledek hospodá̌ení po zdanění</td>
+<td style="text-align: center;">53</td>
+<td style="text-align: center;">54631</td>
+<td style="text-align: center;">60999</td>
+</tr>
+<tr>
+<td style="text-align: center;">M.</td>
+<td style="text-align: center;">Převod podilu na výsledku hospodá̌ení společníkům</td>
+<td style="text-align: center;">54</td>
+<td style="text-align: center;">0</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr>
+<td style="text-align: center;">***</td>
+<td style="text-align: center;">Výsledek hospodá̌ení za účetní období</td>
+<td style="text-align: center;">55</td>
+<td style="text-align: center;">54631</td>
+<td style="text-align: center;">60999</td>
+</tr>
+<tr>
+<td style="text-align: center;">*</td>
+<td style="text-align: center;">Čistý obrat za účetní období (I + II + III + IV + V. + VI. + VII.</td>
+<td style="text-align: center;">56</td>
+<td style="text-align: center;">1566333</td>
+<td style="text-align: center;">1577852</td>
+</tr>
+</tbody>
+</table>
+<p>Sestaveno dne:
+Právní forma účetní jednotky:
+Spisová značka:
+Předmět podnikání účetní jednotky:
+Podpisový záznam:</p>
+<ol>
+<li>
+<ol>
+<li>2024
+akciová společnost
+B3169 vedená u Krajského soudu v Ostravě
+výroba a montáž stínicí

@@ -1,0 +1,28 @@
+[tool.poetry]
+name = "financeai"
+version = "0.1.0"
+description = ""
+authors = ["janf19 <jfaller@seznam.cz>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+pandas = "^2.2.3"
+markdown = "^3.7"
+mistralai = "^1.5.1"
+click = "^8.1.8"
+requests = "^2.32.3"
+dotenv = "^0.9.9"
+pydantic-settings = "^2.8.1"
+bs4 = "^0.0.2"
+openpyxl = "^3.1.5"
+beautifulsoup4 = "^4.13.3"
+lxml = "^5.3.1"
+python-docx = "^1.1.2"
+matplotlib = "^3.10.1"
+openai = "^1.68.2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
