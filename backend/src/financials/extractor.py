@@ -764,149 +764,149 @@ class FinancialExtractor:
             
             
             
-    def _extract_industry_with_fallbacks(self, soup: BeautifulSoup) -> Optional[str]:
-        """Extract industry information using multiple fallback strategies."""
-        # Strategy 1: Look for industry keywords in the document
-        industry_keywords = [
-            r'(?:Odvětví|Sektor|Industry):\s*([^\n\.]+)',
-            r'(?:NACE|CZ-NACE|Obor podnikání):\s*([^\n\.]+)',
-            r'(?:Oblast podnikání|Klasifikace):\s*([^\n\.]+)'
-        ]
+    # def _extract_industry_with_fallbacks(self, soup: BeautifulSoup) -> Optional[str]:
+    #     """Extract industry information using multiple fallback strategies."""
+    #     # Strategy 1: Look for industry keywords in the document
+    #     industry_keywords = [
+    #         r'(?:Odvětví|Sektor|Industry):\s*([^\n\.]+)',
+    #         r'(?:NACE|CZ-NACE|Obor podnikání):\s*([^\n\.]+)',
+    #         r'(?:Oblast podnikání|Klasifikace):\s*([^\n\.]+)'
+    #     ]
         
-        all_text = soup.get_text()
+    #     all_text = soup.get_text()
         
-        for pattern in industry_keywords:
-            match = re.search(pattern, all_text, re.IGNORECASE)
-            if match:
-                return match.group(1).strip()
+    #     for pattern in industry_keywords:
+    #         match = re.search(pattern, all_text, re.IGNORECASE)
+    #         if match:
+    #             return match.group(1).strip()
         
-        # Strategy 2: Use company description to infer industry
-        company_info = self.financial_data['information']
-        if 'main_activities' in company_info and company_info['main_activities']:
-            # Mapping of keywords to industries
-            industry_map = {
-                'stínicí': 'Building Materials',
-                'žaluzií': 'Building Materials',
-                'stavební': 'Construction',
-                'výroba': 'Manufacturing',
-                'software': 'Technology',
-                'IT': 'Technology',
-                'potravin': 'Food Production',
-                'retail': 'Retail',
-                'obchod': 'Retail',
-                'finanční': 'Financial Services',
-                'bankov': 'Banking',
-                'energeti': 'Energy',
-                'doprav': 'Transportation'
-            }
+    #     # Strategy 2: Use company description to infer industry
+    #     company_info = self.financial_data['information']
+    #     if 'main_activities' in company_info and company_info['main_activities']:
+    #         # Mapping of keywords to industries
+    #         industry_map = {
+    #             'stínicí': 'Building Materials',
+    #             'žaluzií': 'Building Materials',
+    #             'stavební': 'Construction',
+    #             'výroba': 'Manufacturing',
+    #             'software': 'Technology',
+    #             'IT': 'Technology',
+    #             'potravin': 'Food Production',
+    #             'retail': 'Retail',
+    #             'obchod': 'Retail',
+    #             'finanční': 'Financial Services',
+    #             'bankov': 'Banking',
+    #             'energeti': 'Energy',
+    #             'doprav': 'Transportation'
+    #         }
             
-            for activity in company_info['main_activities']:
-                for keyword, industry in industry_map.items():
-                    if keyword.lower() in activity.lower():
-                        return industry
+    #         for activity in company_info['main_activities']:
+    #             for keyword, industry in industry_map.items():
+    #                 if keyword.lower() in activity.lower():
+    #                     return industry
         
-        # Strategy 3: Use LLM (most comprehensive)
-        if self.client:
-            try:
-                # Get document excerpts that might contain industry information
-                # Look for headers, company description, or summary sections
-                potential_sections = []
+    #     # Strategy 3: Use LLM (most comprehensive)
+    #     if self.client:
+    #         try:
+    #             # Get document excerpts that might contain industry information
+    #             # Look for headers, company description, or summary sections
+    #             potential_sections = []
                 
-                # Find company description or "about us" section
-                description_headers = ['O společnosti', 'Profil společnosti', 'Základní údaje']
-                for header in description_headers:
-                    header_elem = soup.find(string=re.compile(header, re.IGNORECASE))
-                    if header_elem:
-                        # Extract next few paragraphs
-                        parent = header_elem.parent
-                        context = header_elem.get_text() + "\n"
-                        for sibling in parent.find_next_siblings():
-                            if sibling.name in ['p', 'div'] and len(context) < 2000:
-                                context += sibling.get_text() + "\n"
-                        potential_sections.append(context)
+    #             # Find company description or "about us" section
+    #             description_headers = ['O společnosti', 'Profil společnosti', 'Základní údaje']
+    #             for header in description_headers:
+    #                 header_elem = soup.find(string=re.compile(header, re.IGNORECASE))
+    #                 if header_elem:
+    #                     # Extract next few paragraphs
+    #                     parent = header_elem.parent
+    #                     context = header_elem.get_text() + "\n"
+    #                     for sibling in parent.find_next_siblings():
+    #                         if sibling.name in ['p', 'div'] and len(context) < 2000:
+    #                             context += sibling.get_text() + "\n"
+    #                     potential_sections.append(context)
                 
-                # Try to extract from any preamble or introduction
-                intro_section = soup.find_all(['p', 'div'], limit=10)
-                intro_text = "\n".join([section.get_text() for section in intro_section])
-                if len(intro_text) > 100:  # Only if it's substantial
-                    potential_sections.append(intro_text[:2000])
+    #             # Try to extract from any preamble or introduction
+    #             intro_section = soup.find_all(['p', 'div'], limit=10)
+    #             intro_text = "\n".join([section.get_text() for section in intro_section])
+    #             if len(intro_text) > 100:  # Only if it's substantial
+    #                 potential_sections.append(intro_text[:2000])
                 
-                # If no sections, use first 2000 characters of document
-                if not potential_sections:
-                    potential_sections.append(all_text[:2000])
+    #             # If no sections, use first 2000 characters of document
+    #             if not potential_sections:
+    #                 potential_sections.append(all_text[:2000])
                 
-                # Use company name to help identification
-                company_name = company_info.get('company_name', 'Unknown Company')
+    #             # Use company name to help identification
+    #             company_name = company_info.get('company_name', 'Unknown Company')
                 
-                # Prepare the context
-                context = f"Company name: {company_name}\n\n"
-                context += "Document excerpts:\n" + "\n---\n".join(potential_sections[:3])  # Limit to 3 sections
+    #             # Prepare the context
+    #             context = f"Company name: {company_name}\n\n"
+    #             context += "Document excerpts:\n" + "\n---\n".join(potential_sections[:3])  # Limit to 3 sections
                 
-                prompt = f"""
-                Based on the following information from a Czech financial report, determine the industry of the company.
+    #             prompt = f"""
+    #             Based on the following information from a Czech financial report, determine the industry of the company.
                 
-                {context}
+    #             {context}
                 
-                Identify the industry and return ONLY one of the following industries that best matches:
-                - Agriculture
-                - Automotive
-                - Banking
-                - Building Materials
-                - Chemicals
-                - Construction
-                - Consumer Goods
-                - Energy
-                - Financial Services
-                - Food Production
-                - Healthcare
-                - Hospitality
-                - Information Technology
-                - Insurance
-                - Manufacturing
-                - Media
-                - Mining
-                - Pharmaceuticals
-                - Real Estate
-                - Retail
-                - Technology
-                - Telecommunications
-                - Transportation
-                - Utilities
+    #             Identify the industry and return ONLY one of the following industries that best matches:
+    #             - Agriculture
+    #             - Automotive
+    #             - Banking
+    #             - Building Materials
+    #             - Chemicals
+    #             - Construction
+    #             - Consumer Goods
+    #             - Energy
+    #             - Financial Services
+    #             - Food Production
+    #             - Healthcare
+    #             - Hospitality
+    #             - Information Technology
+    #             - Insurance
+    #             - Manufacturing
+    #             - Media
+    #             - Mining
+    #             - Pharmaceuticals
+    #             - Real Estate
+    #             - Retail
+    #             - Technology
+    #             - Telecommunications
+    #             - Transportation
+    #             - Utilities
                 
-                If absolutely none of these match, return "Other Manufacturing".
-                Return just the industry name, nothing else.
-                """
+    #             If absolutely none of these match, return "Other Manufacturing".
+    #             Return just the industry name, nothing else.
+    #             """
                 
-                response = self.client.chat.completions.create(
-                    model="gpt-3.5-turbo",  # Using 3.5 for cost efficiency, adjust as needed
-                    messages=[
-                        {"role": "system", "content": "You analyze financial documents to determine the company's industry."},
-                        {"role": "user", "content": prompt}
-                    ],
-                    temperature=0.1,
-                    max_tokens=20  # Just need a short answer
-                )
+    #             response = self.client.chat.completions.create(
+    #                 model="gpt-3.5-turbo",  # Using 3.5 for cost efficiency, adjust as needed
+    #                 messages=[
+    #                     {"role": "system", "content": "You analyze financial documents to determine the company's industry."},
+    #                     {"role": "user", "content": prompt}
+    #                 ],
+    #                 temperature=0.1,
+    #                 max_tokens=20  # Just need a short answer
+    #             )
                 
-                industry = response.choices[0].message.content.strip()
-                # Check if the response contains only the industry name
-                if industry in [
-                    "Agriculture", "Automotive", "Banking", "Building Materials", 
-                    "Chemicals", "Construction", "Consumer Goods", "Energy", 
-                    "Financial Services", "Food Production", "Healthcare", 
-                    "Hospitality", "Information Technology", "Insurance", 
-                    "Manufacturing", "Media", "Mining", "Pharmaceuticals", 
-                    "Real Estate", "Retail", "Technology", "Telecommunications", 
-                    "Transportation", "Utilities", "Other Manufacturing"
-                ]:
-                    return industry
-                else:
-                    logger.warning(f"LLM returned invalid industry format: {industry}")
+    #             industry = response.choices[0].message.content.strip()
+    #             # Check if the response contains only the industry name
+    #             if industry in [
+    #                 "Agriculture", "Automotive", "Banking", "Building Materials", 
+    #                 "Chemicals", "Construction", "Consumer Goods", "Energy", 
+    #                 "Financial Services", "Food Production", "Healthcare", 
+    #                 "Hospitality", "Information Technology", "Insurance", 
+    #                 "Manufacturing", "Media", "Mining", "Pharmaceuticals", 
+    #                 "Real Estate", "Retail", "Technology", "Telecommunications", 
+    #                 "Transportation", "Utilities", "Other Manufacturing"
+    #             ]:
+    #                 return industry
+    #             else:
+    #                 logger.warning(f"LLM returned invalid industry format: {industry}")
                 
-            except Exception as e:
-                logger.error(f"Error in industry LLM extraction: {e}")
+    #         except Exception as e:
+    #             logger.error(f"Error in industry LLM extraction: {e}")
         
-        # If all strategies fail, return a default
-        return "Manufacturing"  # Most common default
+    #     # If all strategies fail, return a default
+    #     return "Manufacturing"  # Most common default
     
     
     
@@ -946,7 +946,7 @@ class FinancialExtractor:
         info = self.financial_data['information']
         if 'industry' not in info or not info['industry']:
             logger.warning("Missing critical field: industry. Attempting special extraction.")
-            industry = self._extract_industry_with_fallbacks(soup)
+            industry = "Not found" #self._extract_industry_with_fallbacks(soup)
             if industry:
                 self.financial_data['information']['industry'] = industry
     
