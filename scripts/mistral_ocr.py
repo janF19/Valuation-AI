@@ -1,11 +1,3 @@
-# /// script
-# requires-python = ">=3.12"
-# dependencies = [
-#     "click",
-#     "mistralai",
-#     "markdown",
-# ]
-# ///
 
 import os
 import json

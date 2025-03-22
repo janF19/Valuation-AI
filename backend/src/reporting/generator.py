@@ -63,8 +63,7 @@ class ReportGenerator:
         # Define metrics with fallback values
         key_metrics = [
             ('Revenue', metrics.get('revenue_from_products_and_services_current', 'N/A')),
-            ('EBIT', metrics.get('operating_profit_current', 'N/A')),
-            ('Operating Profit', metrics.get('operating_profit_current', 'N/A'))
+            ('EBIT', metrics.get('operating_profit_current', 'N/A'))
         ]
         
         for metric, value in key_metrics:
@@ -139,15 +138,15 @@ class ReportGenerator:
         # Safely get metrics with default values
         revenue = metrics.get('revenue_from_products_and_services_current', 'N/A')
         ebit = metrics.get('operating_profit_current', 'N/A')
-        operating_profit = metrics.get('operating_profit_current', 'N/A')
+        #operating_profit = metrics.get('operating_profit_current', 'N/A')
         
         # Format values only if they are numeric
         revenue_str = f"{revenue:,.0f}" if isinstance(revenue, (int, float)) else str(revenue)
         ebit_str = f"{ebit:,.0f}" if isinstance(ebit, (int, float)) else str(ebit)
-        operating_profit_str = f"{operating_profit:,.0f}" if isinstance(operating_profit, (int, float)) else str(operating_profit)
+        #operating_profit_str = f"{operating_profit:,.0f}" if isinstance(operating_profit, (int, float)) else str(operating_profit)
         
         # Check if we have enough data to perform analysis
-        available_metrics = [m for m in [revenue, ebit, operating_profit] if m != 'N/A']
+        available_metrics = [m for m in [revenue, ebit] if m != 'N/A']
         if not available_metrics:
             return "No financial metrics available to perform analysis."
         
@@ -158,7 +157,6 @@ class ReportGenerator:
             Analyze the financial health of a company based on these metrics (all values in thousands Kč):
             - Revenue: {revenue_str}
             - EBIT: {ebit_str}
-            - Operating Profit: {operating_profit_str}
 
             Provide a brief (2-3 sentences) analysis of the company's financial health based on these metrics.
             Focus on profitability and operational efficiency. If any metrics are unavailable (shown as N/A),

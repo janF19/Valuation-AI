@@ -1,1 +1,0 @@
-would be nice to call justice and get uptodate info who is in charge ect., also using serp call get some news
