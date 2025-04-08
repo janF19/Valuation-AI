@@ -1,10 +1,11 @@
 import logging
 from pathlib import Path
 from backend.src.ocr.processing import OCRProcessor
-from backend.src.financials.extractor import FinancialExtractor
+#from backend.src.financials.extractor import FinancialExtractor
 from backend.src.reporting.generator import ReportGenerator
 from backend.config.settings import settings
 from backend.src.valuation.valuator import CompanyValuator
+from backend.src.financials.extractor2 import FinancialExtractor
 
 # Configure logging here
 logging.basicConfig(
@@ -26,39 +27,95 @@ class ValuationWorkflow:
         try:
             # OCR Processing
             logger.info("Initializing OCR processing")
+            # Verify API key is available
+            if not settings.MISTRAL_API_KEY:
+                logger.error("MISTRAL_API_KEY is not set or empty")
+                raise ValueError("MISTRAL_API_KEY is missing. Please check your environment variables or settings.")
+            
+            # Add more detailed logging for API key
+            logger.info(f"Using Mistral API key (first 5 chars): {settings.MISTRAL_API_KEY[:5]}...")
+            logger.info(f"API key length: {len(settings.MISTRAL_API_KEY)}")
+            
             processor = OCRProcessor(api_key=settings.MISTRAL_API_KEY)
             
             logger.info("Processing document with OCR")
-            result = processor.process_document(
-                str(file_path), format="html"
-            )
+            try:
+                # Add a retry mechanism for API calls
+                max_retries = 3
+                retry_count = 0
+                last_error = None
+                
+                while retry_count < max_retries:
+                    try:
+                        logger.info(f"OCR attempt {retry_count + 1}/{max_retries}")
+                        result = processor.process_document(
+                            str(file_path), format="html"
+                        )
+                        
+                        html_content = result[0] if isinstance(result, tuple) else result
+                        logger.info("OCR processing completed successfully")
+                        
+                        # Save html_content
+                        with open(temp_dir / "html_content.html", "w", encoding="utf-8") as f:
+                            f.write(html_content)
+                        logger.info("Saved HTML content to temp_results")
+                        break  # Success, exit the retry loop
+                    except Exception as retry_error:
+                        retry_count += 1
+                        last_error = retry_error
+                        logger.warning(f"OCR attempt {retry_count} failed: {str(retry_error)}")
+                        if retry_count < max_retries:
+                            import time
+                            wait_time = 2 ** retry_count  # Exponential backoff
+                            logger.info(f"Retrying in {wait_time} seconds...")
+                            time.sleep(wait_time)
+                        else:
+                            logger.error(f"All {max_retries} OCR attempts failed")
+                            raise last_error
+            except Exception as ocr_error:
+                logger.error(f"OCR processing failed: {str(ocr_error)}")
+                
+                # Check if it's an authentication error
+                if "401 Unauthorized" in str(ocr_error) or "authentication" in str(ocr_error).lower():
+                    logger.error("Authentication error detected. Please verify your Mistral API key is valid and not expired.")
+                    raise ValueError("Mistral API authentication failed. Please check your API key.") from ocr_error
+                
+                raise
             
-            html_content = result[0] if isinstance(result, tuple) else result
-            logger.info("OCR processing completed successfully")
+            #zde je problem pokud vevnitr failed to process income statement atd, try more
+            #new strategy - look for keyword rozvaha pokud je v tabulce soucasti tabulky tak posli llm 
+            #na processing pokud ne hledej dal do te doby nez najdes
             
-            # Save html_content
-            with open(temp_dir / "html_content.html", "w", encoding="utf-8") as f:
-                f.write(html_content)
-            logger.info("Saved HTML content to temp_results")
+            #dalsi moznost fuzzy search provozni vysldek hospodareni v celem dokumentu a grab number around it
+            
+            #last resort if this returns empty value for any of those values than call aws ocr api
+            
+            
             
             logger.info("Extracting financial data")
             extractor = FinancialExtractor()
             financial_data = extractor.extract_from_html(html_content)
             logger.info("Financial data extraction completed")
-            # Save financial_data
+            # Save financial_data with proper encoding for Czech characters
             import json
             with open(temp_dir / "financial_data.json", "w", encoding="utf-8") as f:
-                json.dump(financial_data, f, indent=4)
+                json.dump(financial_data, f, indent=4, ensure_ascii=False)
             logger.info("Saved financial data to temp_results")
+            
+            
+            
+            
+            
+            
             
             logger.info("Calculating valuation multiples")
             valuation_multiple = CompanyValuator(financial_data)
             result_valuation = valuation_multiple.calculate_multiples()
             logger.info("Valuation calculations completed")
             
-            # Save result_valuation
+            # Save result_valuation with proper encoding for Czech characters
             with open(temp_dir / "result_valuation.json", "w", encoding="utf-8") as f:
-                json.dump(result_valuation, f, indent=4)
+                json.dump(result_valuation, f, indent=4, ensure_ascii=False)
             logger.info("Saved valuation results to temp_results")
             
             # Generate Report

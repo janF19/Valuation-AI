@@ -58,7 +58,7 @@ def main():
         
         # Run the workflow with the specified output path
         workflow = ValuationWorkflow()
-        report = workflow.execute(str(input_path), str(output_path))
+        workflow.execute(str(input_path), str(output_path))
         logger.info("Workflow completed successfully!")
         
     except Exception as e:

@@ -1,0 +1,61 @@
+{
+    "income_statement": {
+        "revenue_from_products_and_services_current": 1681074,
+        "revenue_from_goods_current": 371254,
+        "production_consumption_current": 1806607,
+        "personnel_costs_current": 241270,
+        "wage_costs_current": 174233,
+        "depreciation_current": 81323,
+        "operating_profit_current": 5524,
+        "ebit_current": 5524
+    },
+    "balance_sheet": {
+        "total_assets_current": 1855817,
+        "total_assets_previous": 2159580,
+        "intangible_assets_current": 3341,
+        "intangible_assets_previous": 3915,
+        "tangible_assets_current": 727164,
+        "tangible_assets_previous": 813307,
+        "current_assets_current": 1122285,
+        "current_assets_previous": 1329690,
+        "total_liabilities_equity_current": 1855817,
+        "total_liabilities_equity_previous": 2150580,
+        "equity_current": 917337,
+        "equity_previous": 968947,
+        "liabilities_current": 935545,
+        "liabilities_previous": 1180636
+    },
+    "cash_flow": {
+        "initial_cash_balance_current": null,
+        "initial_cash_balance_previous": null,
+        "profit_before_tax_current": -32435,
+        "profit_before_tax_previous": null,
+        "net_operating_cash_flow_current": null,
+        "net_operating_cash_flow_previous": null,
+        "capex_current": null,
+        "capex_previous": null,
+        "proceeds_from_sale_of_fixed_assets_current": null,
+        "proceeds_from_sale_of_fixed_assets_previous": null
+    },
+    "information": {
+        "IC": "25849026",
+        "registered_capital": "530000 000,- Kč",
+        "employee_count": null,
+        "accounting_period": "2023",
+        "company_name": "VÍTKOVICE CYLINDERS a.s.",
+        "legal_form": "akciová společnost",
+        "main_activities": [
+            "Montáž, opravy, revize a zkoušky tlakových zařízení",
+            "nádob na plyny",
+            "plynových zařízení a elektrických zařízení",
+            "kovářství",
+            "zámečnictví",
+            "nástrojářství",
+            "provádění staveb, jejich změn a odstraňování"
+        ],
+        "established": null,
+        "headquarters": "Vítkovice 3041, 70300 Ostrava",
+        "news": "In 2023, VÍTKOVICE CYLINDERS a.s. focused on developing its pressure applications business despite a significant downturn in engineering production. The company maintained a turnover above two billion and a positive operating result. They implemented a CRM system to improve order preparation and continued to enhance internal processes for increased productivity.",
+        "industry": "Manufacturing"
+    }
+}

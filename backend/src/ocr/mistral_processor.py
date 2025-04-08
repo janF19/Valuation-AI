@@ -6,10 +6,14 @@ from typing import Optional, Union, Tuple, Dict
 from mistralai import Mistral
 from mistralai import DocumentURLChunk
 import markdown
+import logging
+
+logger = logging.getLogger(__name__)
 
 class MistralOCRProcessor:
     def __init__(self, api_key: str):
         self.client = Mistral(api_key=api_key)
+        self.api_key = api_key
         
     def process_document(
         self,
@@ -43,6 +47,12 @@ class MistralOCRProcessor:
             Otherwise:
                 Content string (JSON, HTML, or markdown)
         """
+        # Debug: Print first few characters of API key to verify it's loaded
+        if self.api_key:
+            logger.info(f"API key loaded (first 5 chars): {self.api_key[:5]}...")
+        else:
+            logger.error("API key is empty or None")
+        
         # Validate options
         if output_dir and not (inline_images or extract_images):
             raise ValueError("output_dir requires either inline_images or extract_images")

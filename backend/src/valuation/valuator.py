@@ -1,5 +1,5 @@
 # src/valuation/valuator.py
-from backend.src.financials.extractor import FinancialExtractor
+from backend.src.financials.extractor_old import FinancialExtractor
 from typing import Dict, Any, Tuple
 import requests
 from bs4 import BeautifulSoup
@@ -137,9 +137,7 @@ class CompanyValuator:
         # If no match is found, provide default values and log the miss
         print(f"Could not find exact match for '{industry}'. Using market average.")
         return default_ev_ebitda, default_ev_ebit
-        def calculate_dcf(self):
-            # Implement Discounted Cash Flow valuation
-            pass
+        
             
     
     
@@ -197,31 +195,47 @@ class CompanyValuator:
                 #fallback is last year
                 period = 2024
             
-            operating_profit = self.financial_data['income_statement']['operating_profit_current']
-            depreciation_amortization = self.financial_data['income_statement']['depreciation_current']
-            industry = self.financial_data['information']['industry']
+            # Get values with safe defaults if they're None
+            operating_profit = self.financial_data['income_statement'].get('operating_profit_current')
+            depreciation_amortization = self.financial_data['income_statement'].get('depreciation_current')
+            industry = self.financial_data['information'].get('industry', 'Unknown')
             
             print(f"Searching for industry: {industry}")  # Debug print
             
-            # Calculate EBITDA
-            ebit = operating_profit
-            ebitda = ebit + depreciation_amortization
-            
-            ebit_original = (ebit, period)
-            ebitda_original = (ebitda, period)
-            
-            if period != 2024:
-                ebit = self.adjust_values_to_2025(period, ebit)
-                ebitda = self.adjust_values_to_2025(period, ebitda)
+            # Check for None values and handle them
+            if operating_profit is None:
+                print("Warning: Operating profit is None. Valuation may be incomplete.")
+                ebit = None
+            else:
+                ebit = operating_profit
                 
-                 
+            # Calculate EBITDA only if both values are available
+            if ebit is not None and depreciation_amortization is not None:
+                ebitda = ebit + depreciation_amortization
+            elif ebit is not None:
+                print("Warning: Depreciation/amortization is None. EBITDA will equal EBIT.")
+                ebitda = ebit
+            else:
+                ebitda = None
+                print("Warning: Cannot calculate EBITDA due to missing data.")
+            
+            # Store original values with period
+            ebit_original = (ebit, period) if ebit is not None else (None, period)
+            ebitda_original = (ebitda, period) if ebitda is not None else (None, period)
+            
+            # Only adjust values if they're not None
+            if period != 2024:
+                if ebit is not None:
+                    ebit = self.adjust_values_to_2025(period, ebit)
+                if ebitda is not None:
+                    ebitda = self.adjust_values_to_2025(period, ebitda)
             
             # Get multiples once
             ev_ebitda_multiple, ev_ebit_multiple = self.get_multiples(industry)
 
-            # Calculate Enterprise Value
-            enterprise_ebitda_value = ebitda * ev_ebitda_multiple
-            enterprise_ebit_value = ebit * ev_ebit_multiple
+            # Calculate Enterprise Value only if values are available
+            enterprise_ebitda_value = ebitda * ev_ebitda_multiple if ebitda is not None else None
+            enterprise_ebit_value = ebit * ev_ebit_multiple if ebit is not None else None
 
             # Unpack tuples for clearer dictionary structure
             return {

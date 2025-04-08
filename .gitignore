@@ -23,3 +23,9 @@ sdist/
 var/
 wheels/
 *.egg-info/
+
+todo.md
+
+
+*.pdf
+*.docx
