@@ -31,4 +31,5 @@ todo.md
 *.docx
 .html
 .json
-temp_cli_results
+temp_cli_results/
+scripts/
