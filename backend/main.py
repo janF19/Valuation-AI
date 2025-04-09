@@ -5,7 +5,7 @@ from backend.src.ocr.processing import OCRProcessor
 from backend.src.reporting.generator import ReportGenerator
 from backend.config.settings import settings
 from backend.src.valuation.valuator import CompanyValuator
-from backend.src.financials.extractor2 import FinancialExtractor
+from backend.src.financials.extractor import FinancialExtractor
 
 # Configure logging here
 logging.basicConfig(
@@ -81,15 +81,7 @@ class ValuationWorkflow:
                     raise ValueError("Mistral API authentication failed. Please check your API key.") from ocr_error
                 
                 raise
-            
-            #zde je problem pokud vevnitr failed to process income statement atd, try more
-            #new strategy - look for keyword rozvaha pokud je v tabulce soucasti tabulky tak posli llm 
-            #na processing pokud ne hledej dal do te doby nez najdes
-            
-            #dalsi moznost fuzzy search provozni vysldek hospodareni v celem dokumentu a grab number around it
-            
-            #last resort if this returns empty value for any of those values than call aws ocr api
-            
+           
             
             
             logger.info("Extracting financial data")
@@ -102,11 +94,7 @@ class ValuationWorkflow:
                 json.dump(financial_data, f, indent=4, ensure_ascii=False)
             logger.info("Saved financial data to temp_results")
             
-            
-            
-            
-            
-            
+ 
             
             logger.info("Calculating valuation multiples")
             valuation_multiple = CompanyValuator(financial_data)

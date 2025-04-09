@@ -1,5 +1,5 @@
 # src/valuation/valuator.py
-from backend.src.financials.extractor_old import FinancialExtractor
+
 from typing import Dict, Any, Tuple
 import requests
 from bs4 import BeautifulSoup

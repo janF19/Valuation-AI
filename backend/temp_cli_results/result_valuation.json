@@ -1,16 +1,16 @@
 {
     "EBIT original": {
-        "value": 5524,
-        "year": 2023
+        "value": 70015,
+        "year": 2020
     },
     "EBITDA original": {
-        "value": 86847,
-        "year": 2023
+        "value": 116337,
+        "year": 2020
     },
-    "EBIT": 6014.825813333333,
-    "EBITDA": 94563.64544,
+    "EBIT": 100827.9125742671,
+    "EBITDA": 167535.7689802544,
     "EV/EBITDA Multiple": 18.53,
     "EV/EBIT Multiple": 25.16,
-    "Enterprise Value based on EBITDA (Kč thousands)": 1752264.3500032,
-    "Enterprise Value based on EBIT (Kč thousands)": 151333.01746346665
+    "Enterprise Value based on EBITDA (Kč thousands)": 3104437.799204114,
+    "Enterprise Value based on EBIT (Kč thousands)": 2536830.2803685605
 }
