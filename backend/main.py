@@ -1,7 +1,6 @@
 import logging
 from pathlib import Path
 from backend.src.ocr.processing import OCRProcessor
-#from backend.src.financials.extractor import FinancialExtractor
 from backend.src.reporting.generator import ReportGenerator
 from backend.config.settings import settings
 from backend.src.valuation.valuator import CompanyValuator
