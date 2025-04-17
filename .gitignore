@@ -33,3 +33,6 @@ todo.md
 .json
 temp_cli_results/
 scripts/
+
+backend/src/financials/extractor_old.py
+

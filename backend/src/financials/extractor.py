@@ -27,14 +27,16 @@ logger = logging.getLogger(__name__) # Get logger for the current module
 # Added more variations, including the exact header from your HTML
 INCOME_KEYWORDS = ['VÝKAZ ZISKU A ZTRÁTY', 'VÝKAZ ZISKU A ZTRÁTY, druhové členění', 'VYKAZ ZISKU A ZTRATY', 'VÝKAZ ZISKU', 'VYKAZ ZISKU', 'VÝSLEDOVKA', 'Income Statement']
 BALANCE_KEYWORDS = ['ROZVAHA', 'Rozvaha', 'Balance Sheet', 'BILANCE', 'AKTIVA', 'PASIVA']
-CASHFLOW_KEYWORDS = ['PŘEHLED O PENĚŽNÍCH TOCÍCH', 'PREHLED O PENEZNICH TOCICH', 'CASH FLOW', 'PENĚŽNÍ TOKY', 'PENEZNI TOKY', 'Přehled o peněžních tocích']
+CASHFLOW_KEYWORDS = ['PŘEHLED O PENĚŽNICH TOCÍCH', 'PŘEHLED O PENĚŽNÍCH TOCÍCH', 'PREHLED O PENEZNICH TOCICH', 'CASH FLOW', 'PENĚŽNÍ TOKY', 'PENEZNI TOKY', 'Přehled o peněžních tocích']
 
 # LLM Model Configuration
 LLM_MODEL = "gpt-4o"
 MAX_CONTEXT_CHARS = 12000 # Keep increased context
 CONTEXT_LINES_BEFORE = 2
-CONTEXT_LINES_AFTER = 90
-INFO_CONTEXT_LINES = 90
+CONTEXT_LINES_AFTER = 45
+INFO_CONTEXT_LINES = 80
+
+#90 and 90 worked well
 
 class FinancialExtractor:
     """
@@ -92,13 +94,58 @@ class FinancialExtractor:
         # Removed cleaning from here, expects pre-cleaned input
         return SequenceMatcher(None, s1_clean, s2_clean).ratio()
 
+    def _validate_financial_context(self, context: str, section_type: str) -> bool:
+        """Validates that the extracted context likely contains actual financial data."""
+        if not context:
+            return False
+        
+        # Look for patterns indicating financial tables
+        has_numbers = bool(re.search(r'\d{3,}', context))  # Multiple digit numbers
+        
+        # Cash flow specific patterns
+        if section_type == 'cash_flow':
+            # Look for common cash flow indicators with fuzzy matching for OCR reliability
+            cash_flow_indicators = [
+                'Stav peněžních prostředků', 
+                'Peněžní toky z', 
+                'Čistý peněžní tok',
+                'PENĚŽNÍ TOKY',
+                'Cash flow',
+                'Počáteční stav peněžních',
+                'Konečný stav peněžních'
+            ]
+            
+            # Apply fuzzy matching instead of regex for OCR text
+            has_cf_terms = False
+            context_lower = context.lower()
+            threshold = 0.75  # Lower threshold for fuzzy matching of terms
+            
+            # Check each line for possible matches
+            for line in context.split('\n'):
+                line_clean = self._clean_text(line)
+                for indicator in cash_flow_indicators:
+                    indicator_clean = self._clean_text(indicator)
+                    # If the indicator is potentially in this line
+                    if len(indicator_clean) > 5 and (
+                       indicator_clean in line_clean or 
+                       self._fuzzy_match_score(indicator_clean, line_clean) > threshold):
+                        has_cf_terms = True
+                        break
+                if has_cf_terms:
+                    break
+                
+            return has_numbers and has_cf_terms
+        
+        return has_numbers
+
     def _find_section_context(self,
                               text_lines: List[str],
                               keywords: List[str],
-                              threshold: float = 0.85) -> Optional[Tuple[str, int]]: # Raised threshold slightly, rely on better matching
+                              threshold: float = 0.85,
+                              section_type: str = None) -> Optional[Tuple[str, int]]:
         """
         Refined section finding: Cleans text better, checks for containment,
-        and prioritizes strong matches.
+        and prioritizes strong matches. Adds validation for financial data.
         """
         best_match_score = 0.0
         best_match_index = -1
@@ -107,7 +154,39 @@ class FinancialExtractor:
 
         logger.debug(f"Searching for keywords like '{cleaned_keywords[0]}' with threshold {threshold}")
 
+        # First pass: Look for exact HTML heading matches which are most reliable
         for i, line in enumerate(text_lines):
+            line_original = line.strip()
+            if not line_original:
+                continue
+            
+            # Check for HTML heading tags containing our keywords
+            heading_match = re.search(r'<h\d>(.*?)</h\d>', line_original, re.IGNORECASE)
+            if heading_match:
+                heading_text = heading_match.group(1)
+                heading_clean = self._clean_text(heading_text)
+                
+                for kw_clean in cleaned_keywords:
+                    if kw_clean == heading_clean or self._fuzzy_match_score(kw_clean, heading_clean) > 0.95:
+                        logger.info(f"Found exact HTML heading match: '{line_original}' for keywords at line {i}")
+                        start_line = max(0, i - CONTEXT_LINES_BEFORE)
+                        end_line = min(len(text_lines), i + CONTEXT_LINES_AFTER)
+                        context_lines_original = text_lines[start_line:end_line]
+                        context_text = "\n".join(context_lines_original).strip()
+                        
+                        # Validate context contains actual financial data
+                        if section_type and not self._validate_financial_context(context_text, section_type):
+                            logger.warning(f"Found heading but context doesn't contain financial data at line {i}")
+                            continue
+                            
+                        if len(context_text) > MAX_CONTEXT_CHARS:
+                            context_text = context_text[:MAX_CONTEXT_CHARS]
+                            
+                        return context_text, i
+
+        # Second pass: Standard fuzzy matching approach
+        for i, line in enumerate(text_lines):
+            # ... existing code for fuzzy matching ...
             line_original = line.strip() # Keep original for context
             if not line_original:
                  continue
@@ -115,11 +194,6 @@ class FinancialExtractor:
             line_clean = self._clean_text(line_original)
             if not line_clean: # Skip if cleaning results in empty string
                  continue
-
-            # --- Debug specific lines if needed ---
-            # if 15 < i < 30 or 100 < i < 115: # Example line ranges
-            #      logger.debug(f"Line {i} Clean: '{line_clean}'")
-            # ------------------------------------
 
             current_line_best_score_for_any_keyword = 0.0
             for kw_clean in cleaned_keywords:
@@ -134,8 +208,6 @@ class FinancialExtractor:
                          # Calculate score based on how well the best block matches keyword
                          block_similarity = SequenceMatcher(None, kw_clean, line_clean[match.b:match.b + match.size]).ratio()
                          score_contained = block_similarity * 0.98 # Slightly penalize just being contained
-                         # logger.debug(f"  Contained Match: '{kw_clean}' in '{line_clean}' -> Block Sim: {block_similarity:.2f}, Score: {score_contained:.2f}")
-
 
                 # 2. Check for similarity if line *starts with* keyword (or is very close)
                 score_prefix = 0.0
@@ -144,27 +216,25 @@ class FinancialExtractor:
                 prefix_sim = self._fuzzy_match_score(kw_clean, line_segment_clean)
                 if prefix_sim > 0.8: # Only consider strong prefix matches
                      score_prefix = prefix_sim
-                     # logger.debug(f"  Prefix Match: '{kw_clean}' vs '{line_segment_clean}' -> Score: {score_prefix:.2f}")
-
 
                 # 3. Direct comparison (whole line vs keyword) - less likely but possible
                 score_direct = self._fuzzy_match_score(kw_clean, line_clean)
-                # logger.debug(f"  Direct Match: '{kw_clean}' vs '{line_clean}' -> Score: {score_direct:.2f}")
-
 
                 # Combine: Take the highest score found for this keyword on this line
                 line_keyword_best_score = max(score_contained, score_prefix, score_direct)
 
+                # Boost score for standalone headings (not just mentions within paragraphs)
+                if len(line_clean) < len(kw_clean) + 20:  # Short line, likely a heading
+                    line_keyword_best_score *= 1.05
+                    
                 # Update the best score found *for this specific line* across all keywords
                 current_line_best_score_for_any_keyword = max(current_line_best_score_for_any_keyword, line_keyword_best_score)
-
 
             # Update the overall best score if this line's best score is higher
             if current_line_best_score_for_any_keyword > best_match_score:
                 best_match_score = current_line_best_score_for_any_keyword
                 best_match_index = i
                 best_match_line_original = line_original # Store the original non-cleaned line
-                # logger.debug(f"==> New Best Overall Score: {best_match_score:.2f} at Line {i}: '{line_original}'")
 
 
         # Final Check against threshold
@@ -178,6 +248,11 @@ class FinancialExtractor:
             context_lines_original = text_lines[start_line:end_line]
             context_text = "\n".join(context_lines_original).strip()
             # -----------------------------------------
+            
+            # Validate context contains actual financial data
+            if section_type and not self._validate_financial_context(context_text, section_type):
+                logger.warning(f"Context doesn't contain expected financial data patterns for {section_type}")
+                return None
 
             if len(context_text) > MAX_CONTEXT_CHARS:
                 original_len = len(context_text)
@@ -198,12 +273,21 @@ class FinancialExtractor:
 
     def _call_llm_for_extraction(self, context: str, prompt_template: str, section_name: str) -> Optional[Dict[str, Any]]:
         # ... (LLM Call logic - unchanged, still includes null check) ...
+        
         if not self.client:
             logger.error(f"Cannot extract {section_name}: OpenAI client not initialized.")
             return None
         if not context:
             logger.warning(f"Cannot extract {section_name}: No context provided.")
             return None
+        
+        
+            
+            
+            
+            
+        logger.info(f"printing whole context for detailed analyses, context for {section_name} ############ /n {context} context ends ################################################")
+
 
         prompt = prompt_template.format(context=context)
 
@@ -253,8 +337,7 @@ class FinancialExtractor:
 
     # --- LLM Prompt Templates (Modified Company Info Prompt) ---
     COMPANY_INFO_PROMPT = """
-    Extract the following company information from the provided text, which comes from the beginning of a Czech financial report (likely OCR'd). The information is typically found in the section titled "IDENTIFIKAČNÍ ÚDAJE SPOLEČNOSTI" or similar. Return ONLY a valid JSON object containing the specified keys. Use `null` if a value cannot be reliably found or is explicitly missing. Ensure numbers are integers.
-
+    Extract the following company information from the provided Czech financial report (výroční zpráva). Return ONLY a valid JSON object containing the specified keys. Use `null` if a value cannot be reliably found or is explicitly missing. Ensure numbers are integers.
     Text Context:
     ---
     {context}
@@ -268,15 +351,25 @@ class FinancialExtractor:
         "accounting_period": "string or null (Find the reporting year, e.g., '2023' from document title or 'ke dni: 31.12.2023')",
         "company_name": "string or null (Find full company name like 'VÍTKOVICE CYLINDERS a.s.')",
         "legal_form": "string or null (Find 'Právní forma', e.g., 'akciová společnost')",
-        "main_activities": ["string", ...] or [] (Find 'Hlavní činnost' or 'Předmět podnikání' - list activities mentioned),
+        "main_activities": ["string", ...] or [] (Find activities under 'Předmět podnikání', 'Stěžejní výrobní sortiment', or similar sections - look for product descriptions and main business focus areas)",
         "established": "string or null (Find 'Datum vzniku / založení' or 'Den zápisu do obchodního rejstříku', if available)",
         "headquarters": "string or null (Find 'Sídlo', the address like 'Vítkovice 3041, 70300 Ostrava')",
-        "news": "string or null (Find summary of what happened and save most important information in few sentences, usually at start of document in section 'ÚVODNÍ SLOVO GENERÁLNÍHO ŘEDITELE')",
+        "news": "string or null (Find key developments in sections like 'Vývoj společnosti', 'Produkty uvedené na trh', 'Marketingová komunikace' - summarize major achievements, partnerships, awards, and product launches from the report year)",
         "industry": "string or null (Infer based on activities/description. Choose from: [Advertising, Aerospace/Defense, Apparel, Auto & Truck, Auto Parts, Beverage (Alcoholic), Beverage (Soft), Broadcasting, Building Materials, Business & Consumer Services, Cable TV, Chemical (Basic), Chemical (Diversified), Chemical (Specialty), Coal & Related Energy, Computer Services, Computers/Peripherals, Construction Supplies, Diversified, Drugs (Pharmaceutical), Education, Electrical Equipment, Electronics (General), Engineering/Construction, Farming/Agriculture, Food Processing, Food Wholesalers, Furn/Home Furnishings, Homebuilding, Hotel/Gaming, Household Products, Information Services, Machinery, Manufacturing, Metals & Mining, Office Equipment & Services, Paper/Forest Products, Power, Real Estate, Recreation, Restaurant/Dining, Retail, Rubber& Tires, Semiconductor, Software, Steel, Telecommunications, Transportation, Trucking, Utility]. Default to 'Manufacturing' or 'Services' if unclear.)"
     }}
 
     Provide ONLY the JSON object. Do not add explanations. Pay special attention to find all values listed in the identification section, even if they appear on different lines or in other parts of the document.
+    Analyze the section carefully for each field. For main_activities, include core products and services from sections describing the company's business and portfolio. For industry, determine the specific sector based on the products described (e.g., 'Building Materials', 'Construction Supplies', 'Manufacturing', etc.). For news, extract significant developments from the reporting year.
     """
+
+
+
+
+
+
+
+
+
 
     INCOME_STATEMENT_PROMPT = """
     Extract key financial metrics from the provided text, expected to be a Czech Income Statement (Výkaz zisku a ztráty), possibly with OCR errors. Focus on the CURRENT accounting period ('běžném období'). Identify the correct column for the current period - it's usually the first numeric column after the text description, often labeled 'běžném' or '1'. Return ONLY a valid JSON object with the specified keys. Use `null` if a value is genuinely missing or unreadable. Convert values to integers (remove spaces, currency symbols like '$'). Handle negative numbers (parentheses or minus signs).
@@ -376,7 +469,26 @@ class FinancialExtractor:
         self.financial_data = self._initialize_financial_data()
 
         try:
-            soup = BeautifulSoup(html_content, 'html.parser')
+            # Explicitly specify encoding for BeautifulSoup
+            # Use 'html.parser' with explicit encoding handling
+            soup = BeautifulSoup(html_content, 'html.parser', from_encoding='utf-8')
+            
+            # Check for encoding in the HTML content
+            meta_charset = None
+            meta_tag = soup.find('meta', charset=True)
+            if meta_tag:
+                meta_charset = meta_tag.get('charset')
+            
+            # Also check for Content-Type meta with charset
+            if not meta_charset:
+                meta_content_type = soup.find('meta', {'http-equiv': lambda x: x and x.lower() == 'content-type'})
+                if meta_content_type and 'charset=' in meta_content_type.get('content', '').lower():
+                    meta_charset = meta_content_type.get('content').split('charset=')[-1].strip()
+            
+            if meta_charset and meta_charset.lower() != 'utf-8':
+                logger.info(f"Detected non-UTF-8 charset in HTML: {meta_charset}. Re-parsing with detected encoding.")
+                soup = BeautifulSoup(html_content, 'html.parser', from_encoding=meta_charset)
+            
             # Try extracting text preserving paragraphs better
             text_parts = []
             for element in soup.find_all(['h1', 'h2', 'h3', 'h4', 'p', 'table']):
@@ -431,7 +543,7 @@ class FinancialExtractor:
                     if len(context) > MAX_CONTEXT_CHARS:
                          context = context[:MAX_CONTEXT_CHARS]
                          logger.warning(f"Truncated context for {name} to {MAX_CONTEXT_CHARS} chars.")
-
+                         
                 if context:
                     extracted_data = self._call_llm_for_extraction(context, prompt, name)
                     if extracted_data:
@@ -459,47 +571,68 @@ class FinancialExtractor:
 
 # --- Example Usage (Unchanged) ---
 if __name__ == "__main__":
-    # --- Make sure to set logging level to DEBUG for the extractor if needed ---
-    # logging.getLogger('__main__').setLevel(logging.DEBUG) # Or use the module name if different
-    # -------------------------------------------------------------------------
-
+    import sys
+    import argparse
+    import os
+    
+    # Set up argument parser
+    parser = argparse.ArgumentParser(description='Extract financial data from HTML files')
+    parser.add_argument('input_file', help='Path to the input HTML file')
+    parser.add_argument('output_file', help='Path to the output JSON file')
+    parser.add_argument('--log', help='Path to log file (optional)')
+    args = parser.parse_args()
+    
+    # Configure logging to file if specified
+    if args.log:
+        log_dir = os.path.dirname(args.log)
+        if log_dir and not os.path.exists(log_dir):
+            os.makedirs(log_dir, exist_ok=True)
+            logger.info(f"Created log directory: {log_dir}")
+            
+        # Add explicit UTF-8 encoding for the file handler
+        file_handler = logging.FileHandler(args.log, encoding='utf-8')
+        file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+        logger.addHandler(file_handler)
+        logger.info(f"Logging to file: {args.log}")
+    
     extractor = FinancialExtractor()
+    
+    try:
+        # Check if input file exists
+        if not os.path.exists(args.input_file):
+            raise FileNotFoundError(f"Input file not found: {args.input_file}")
+            
+        logger.info(f"Reading HTML content from: {args.input_file}")
+        with open(args.input_file, 'r', encoding='utf-8') as f:
+            html_content = f.read()
+        logger.info("HTML content read successfully")
 
-    input_html_file = 'output_vz_2023_isotra.html' # Or 'isotra_2020.html' if that's the target
-    output_json_file = 'financial_data_llm_fixed_v3.json'
+        # Create output directory if it doesn't exist
+        output_dir = os.path.dirname(args.output_file)
+        if output_dir and not os.path.exists(output_dir):
+            os.makedirs(output_dir, exist_ok=True)
+            logger.info(f"Created output directory: {output_dir}")
 
-    if not extractor.client:
-         print(f"\nError: OpenAI client not initialized. Please ensure API key is valid and accessible via {OPENAI_API_KEY_SOURCE}.")
-    else:
-        try:
-            logger.info(f"Reading HTML content from: {input_html_file}")
-            with open(input_html_file, 'r', encoding='utf-8') as f:
-                html_content_example = f.read()
-            logger.info("HTML content read successfully.")
+        logger.info("Starting extraction")
+        financial_data_output = extractor.extract_from_html(html_content)
+        logger.info("Extraction finished")
 
-            logger.info("Starting extraction...")
-            financial_data_output = extractor.extract_from_html(html_content_example)
-            logger.info("Extraction finished.")
+        logger.info(f"Saving extracted data to {args.output_file}")
+        with open(args.output_file, 'w', encoding='utf-8') as f:
+            json.dump(financial_data_output, f, indent=4, ensure_ascii=False)
+        logger.info("Data saved successfully")
 
-            logger.info(f"Saving extracted data to: {output_json_file}")
-            with open(output_json_file, 'w', encoding='utf-8') as f:
-                json.dump(financial_data_output, f, indent=4, ensure_ascii=False)
-            logger.info("Data saved successfully.")
-
-            print("\n--- Extraction Summary ---")
-            print(f"Data saved to: {output_json_file}")
-            print(f"Company Info extracted: {'Yes' if financial_data_output.get('information') else 'No'}")
-            print(f"Income Statement extracted: {'Yes' if financial_data_output.get('income_statement') else 'No'}")
-            print(f"Balance Sheet extracted: {'Yes' if financial_data_output.get('balance_sheet') else 'No'}")
-            print(f"Cash Flow extracted: {'Yes' if financial_data_output.get('cash_flow') else 'No'}")
-            print("------------------------\n")
-
-        except FileNotFoundError:
-            logger.error(f"Error: Input HTML file not found at '{input_html_file}'")
-            print(f"Error: Input HTML file not found at '{input_html_file}'")
-        except openai.AuthenticationError:
-             logger.error("OpenAI Authentication Error: Check your API key.")
-             print("OpenAI Authentication Error: Check your API key.")
-        except Exception as e:
-            logger.error(f"An unexpected error occurred in main execution: {e}", exc_info=True)
-            print(f"An unexpected error occurred: {str(e)}")
+        print("\n--- Extraction Summary ---")
+        print(f"Data saved to: {args.output_file}")
+        print(f"Company Info extracted: {'Yes' if financial_data_output.get('information') else 'No'}")
+        print(f"Income Statement extracted: {'Yes' if financial_data_output.get('income_statement') else 'No'}")
+        print(f"Balance Sheet extracted: {'Yes' if financial_data_output.get('balance_sheet') else 'No'}")
+        print(f"Cash Flow extracted: {'Yes' if financial_data_output.get('cash_flow') else 'No'}")
+        print("------------------------\n")
+        
+    except FileNotFoundError as e:
+        logger.error(f"File not found: {e}")
+        print(f"Error: {e}")
+    except Exception as e:
+        logger.error(f"An unexpected error occurred in main execution: {e}", exc_info=True)
+        print(f"An unexpected error occurred: {str(e)}")
